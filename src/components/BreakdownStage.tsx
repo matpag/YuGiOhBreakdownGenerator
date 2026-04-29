@@ -517,7 +517,7 @@ export function BreakdownStage() {
                   <Group key={geometry.slice.id}>
                     <Line
                       closed
-                      fill={selected ? "#e9f2ff" : "#f6f8fb"}
+                      fill="#f6f8fb"
                       listening={false}
                       points={geometry.points}
                     />
@@ -550,11 +550,19 @@ export function BreakdownStage() {
                       closed
                       listening={false}
                       points={geometry.points}
-                      stroke={selected ? SELECTED_SLICE_STROKE : project.pieChart.borderColor}
-                      strokeWidth={
-                        selected ? project.pieChart.borderWidth + 3 : project.pieChart.borderWidth
-                      }
+                      stroke={project.pieChart.borderColor}
+                      strokeWidth={project.pieChart.borderWidth}
                     />
+                    {selected ? (
+                      <Line
+                        closed
+                        listening={false}
+                        name={EDITOR_OVERLAY_NAME}
+                        points={geometry.points}
+                        stroke={SELECTED_SLICE_STROKE}
+                        strokeWidth={project.pieChart.borderWidth + 3}
+                      />
+                    ) : null}
                   </Group>
                 );
               })}
