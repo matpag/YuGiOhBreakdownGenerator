@@ -56,6 +56,15 @@ export const defaultDocument: BreakdownDocument = {
           value: 2,
           assetId: null,
           imageTransform: { x: 0, y: 0, scale: 1, rotation: 0 },
+          imageLayers: [
+            {
+              id: "slice-1-image-1",
+              name: "Image 1",
+              assetId: null,
+              imageTransform: { x: 0, y: 0, scale: 1, rotation: 0 },
+            },
+          ],
+          selectedImageLayerId: "slice-1-image-1",
         },
         {
           id: "slice-2",
@@ -63,6 +72,15 @@ export const defaultDocument: BreakdownDocument = {
           value: 2,
           assetId: null,
           imageTransform: { x: 0, y: 0, scale: 1, rotation: 0 },
+          imageLayers: [
+            {
+              id: "slice-2-image-1",
+              name: "Image 1",
+              assetId: null,
+              imageTransform: { x: 0, y: 0, scale: 1, rotation: 0 },
+            },
+          ],
+          selectedImageLayerId: "slice-2-image-1",
         },
         {
           id: "slice-3",
@@ -70,6 +88,15 @@ export const defaultDocument: BreakdownDocument = {
           value: 1,
           assetId: null,
           imageTransform: { x: 0, y: 0, scale: 1, rotation: 0 },
+          imageLayers: [
+            {
+              id: "slice-3-image-1",
+              name: "Image 1",
+              assetId: null,
+              imageTransform: { x: 0, y: 0, scale: 1, rotation: 0 },
+            },
+          ],
+          selectedImageLayerId: "slice-3-image-1",
         },
         {
           id: "slice-4",
@@ -77,6 +104,15 @@ export const defaultDocument: BreakdownDocument = {
           value: 1,
           assetId: null,
           imageTransform: { x: 0, y: 0, scale: 1, rotation: 0 },
+          imageLayers: [
+            {
+              id: "slice-4-image-1",
+              name: "Image 1",
+              assetId: null,
+              imageTransform: { x: 0, y: 0, scale: 1, rotation: 0 },
+            },
+          ],
+          selectedImageLayerId: "slice-4-image-1",
         },
         {
           id: "slice-5",
@@ -84,6 +120,15 @@ export const defaultDocument: BreakdownDocument = {
           value: 1,
           assetId: null,
           imageTransform: { x: 0, y: 0, scale: 1, rotation: 0 },
+          imageLayers: [
+            {
+              id: "slice-5-image-1",
+              name: "Image 1",
+              assetId: null,
+              imageTransform: { x: 0, y: 0, scale: 1, rotation: 0 },
+            },
+          ],
+          selectedImageLayerId: "slice-5-image-1",
         },
       ],
     },

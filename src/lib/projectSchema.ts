@@ -74,6 +74,15 @@ export const sliceImageTransformSchema = z
   })
   .strict();
 
+export const sliceImageLayerSchema = z
+  .object({
+    id: z.string().min(1),
+    name: z.string().min(1),
+    assetId: nullableAssetIdSchema,
+    imageTransform: sliceImageTransformSchema,
+  })
+  .strict();
+
 export const chartSliceSchema = z
   .object({
     id: z.string().min(1),
@@ -82,8 +91,33 @@ export const chartSliceSchema = z
     value: nonNegativeNumberSchema,
     assetId: nullableAssetIdSchema,
     imageTransform: sliceImageTransformSchema,
+    imageLayers: z.array(sliceImageLayerSchema).max(2).default([]),
+    selectedImageLayerId: z.string().min(1).nullable().default(null),
   })
-  .strict();
+  .strict()
+  .superRefine((slice, context) => {
+    const layerIds = new Set<string>();
+
+    for (const [index, layer] of slice.imageLayers.entries()) {
+      if (layerIds.has(layer.id)) {
+        context.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: `Duplicate slice image layer id "${layer.id}".`,
+          path: ["imageLayers", index, "id"],
+        });
+      }
+
+      layerIds.add(layer.id);
+    }
+
+    if (slice.selectedImageLayerId !== null && !layerIds.has(slice.selectedImageLayerId)) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: `Selected image layer "${slice.selectedImageLayerId}" does not exist.`,
+        path: ["selectedImageLayerId"],
+      });
+    }
+  });
 
 export const pieChartSettingsSchema = z
   .object({
@@ -164,6 +198,9 @@ export const breakdownDocumentSchema = z
       ...document.project.fonts.map((font) => font.assetId),
       ...document.project.imageLibrary.map((item) => item.assetId),
       ...document.project.pieChart.slices.map((slice) => slice.assetId),
+      ...document.project.pieChart.slices.flatMap((slice) =>
+        slice.imageLayers.map((layer) => layer.assetId),
+      ),
     ].filter((assetId): assetId is string => assetId !== null);
 
     for (const [assetId, asset] of Object.entries(document.assets)) {

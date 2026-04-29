@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { ImagePlus, Minus, Plus } from "lucide-react";
+import { ArrowDown, ArrowUp, ImagePlus, Minus, Plus, Trash2 } from "lucide-react";
 import { fileToAsset, validateImageFile } from "../lib/assets";
 import {
   FONT_FILE_ACCEPT,
@@ -54,7 +54,13 @@ export function EditorSidebar() {
   const addSlice = useProjectStore((state) => state.addSlice);
   const removeSelectedSlice = useProjectStore((state) => state.removeSelectedSlice);
   const updateSlice = useProjectStore((state) => state.updateSlice);
-  const updateSliceImageTransform = useProjectStore((state) => state.updateSliceImageTransform);
+  const updateSliceImageLayerTransform = useProjectStore(
+    (state) => state.updateSliceImageLayerTransform,
+  );
+  const setSelectedSliceImageLayer = useProjectStore((state) => state.setSelectedSliceImageLayer);
+  const addSliceImageLayer = useProjectStore((state) => state.addSliceImageLayer);
+  const removeSliceImageLayer = useProjectStore((state) => state.removeSliceImageLayer);
+  const moveSliceImageLayer = useProjectStore((state) => state.moveSliceImageLayer);
   const addAsset = useProjectStore((state) => state.addAsset);
   const addEmbeddedFont = useProjectStore((state) => state.addEmbeddedFont);
   const addImageLibraryItem = useProjectStore((state) => state.addImageLibraryItem);
@@ -183,7 +189,13 @@ export function EditorSidebar() {
   const logoAsset = project.logo.assetId ? assets[project.logo.assetId] : null;
   const selectedSlice =
     project.pieChart.slices.find((slice) => slice.id === project.pieChart.selectedSliceId) ?? null;
-  const selectedSliceAsset = selectedSlice?.assetId ? assets[selectedSlice.assetId] : null;
+  const selectedSliceImageLayer =
+    selectedSlice?.imageLayers.find((layer) => layer.id === selectedSlice.selectedImageLayerId) ??
+    selectedSlice?.imageLayers[0] ??
+    null;
+  const selectedSliceAsset = selectedSliceImageLayer?.assetId
+    ? assets[selectedSliceImageLayer.assetId]
+    : null;
 
   return (
     <aside className="sidebar">
@@ -545,7 +557,7 @@ export function EditorSidebar() {
           </label>
           <div className="asset-control">
             <span>
-              Image
+              Active image
               <small>{selectedSliceAsset?.name ?? "No image selected"}</small>
             </span>
             <label className="file-button">
@@ -561,57 +573,122 @@ export function EditorSidebar() {
               />
             </label>
           </div>
-          <div className="field-row">
-            <label>
-              Scale
-              <DraftNumberInput
-                min={0.1}
-                step={0.05}
-                value={selectedSlice.imageTransform.scale}
-                onCommit={(scale) =>
-                  updateSliceImageTransform(selectedSlice.id, {
-                    scale,
-                  })
-                }
-              />
-            </label>
-            <label>
-              Rotation
-              <DraftNumberInput
-                step={1}
-                value={selectedSlice.imageTransform.rotation}
-                onCommit={(rotation) =>
-                  updateSliceImageTransform(selectedSlice.id, {
-                    rotation,
-                  })
-                }
-              />
-            </label>
+          <div className="slice-layer-header">
+            <h3>Slice Images</h3>
+            <button
+              type="button"
+              onClick={() => addSliceImageLayer(selectedSlice.id)}
+              disabled={selectedSlice.imageLayers.length >= 2}
+            >
+              <Plus size={16} />
+              Add image
+            </button>
           </div>
-          <div className="field-row">
-            <label>
-              X
-              <DraftNumberInput
-                value={selectedSlice.imageTransform.x}
-                onCommit={(x) =>
-                  updateSliceImageTransform(selectedSlice.id, {
-                    x,
-                  })
-                }
-              />
-            </label>
-            <label>
-              Y
-              <DraftNumberInput
-                value={selectedSlice.imageTransform.y}
-                onCommit={(y) =>
-                  updateSliceImageTransform(selectedSlice.id, {
-                    y,
-                  })
-                }
-              />
-            </label>
+          <div className="slice-layer-list">
+            {selectedSlice.imageLayers.map((layer, index) => {
+              const layerAsset = layer.assetId ? assets[layer.assetId] : null;
+
+              return (
+                <div
+                  className={`slice-layer-row ${
+                    selectedSliceImageLayer?.id === layer.id ? "slice-layer-row-active" : ""
+                  }`}
+                  key={layer.id}
+                >
+                  <button
+                    className="slice-layer-select"
+                    type="button"
+                    onClick={() => setSelectedSliceImageLayer(selectedSlice.id, layer.id)}
+                  >
+                    <span>{layer.name}</span>
+                    <small>{layerAsset?.name ?? "No image selected"}</small>
+                  </button>
+                  <button
+                    className="icon-button"
+                    type="button"
+                    title="Move image down"
+                    disabled={index === selectedSlice.imageLayers.length - 1}
+                    onClick={() => moveSliceImageLayer(selectedSlice.id, layer.id, 1)}
+                  >
+                    <ArrowDown size={15} />
+                  </button>
+                  <button
+                    className="icon-button"
+                    type="button"
+                    title="Move image up"
+                    disabled={index === 0}
+                    onClick={() => moveSliceImageLayer(selectedSlice.id, layer.id, -1)}
+                  >
+                    <ArrowUp size={15} />
+                  </button>
+                  <button
+                    className="icon-button"
+                    type="button"
+                    title="Remove image layer"
+                    disabled={selectedSlice.imageLayers.length <= 1}
+                    onClick={() => removeSliceImageLayer(selectedSlice.id, layer.id)}
+                  >
+                    <Trash2 size={15} />
+                  </button>
+                </div>
+              );
+            })}
           </div>
+          {selectedSliceImageLayer ? (
+            <>
+              <div className="field-row">
+                <label>
+                  Scale
+                  <DraftNumberInput
+                    min={0.1}
+                    step={0.05}
+                    value={selectedSliceImageLayer.imageTransform.scale}
+                    onCommit={(scale) =>
+                      updateSliceImageLayerTransform(selectedSlice.id, selectedSliceImageLayer.id, {
+                        scale,
+                      })
+                    }
+                  />
+                </label>
+                <label>
+                  Rotation
+                  <DraftNumberInput
+                    step={1}
+                    value={selectedSliceImageLayer.imageTransform.rotation}
+                    onCommit={(rotation) =>
+                      updateSliceImageLayerTransform(selectedSlice.id, selectedSliceImageLayer.id, {
+                        rotation,
+                      })
+                    }
+                  />
+                </label>
+              </div>
+              <div className="field-row">
+                <label>
+                  X
+                  <DraftNumberInput
+                    value={selectedSliceImageLayer.imageTransform.x}
+                    onCommit={(x) =>
+                      updateSliceImageLayerTransform(selectedSlice.id, selectedSliceImageLayer.id, {
+                        x,
+                      })
+                    }
+                  />
+                </label>
+                <label>
+                  Y
+                  <DraftNumberInput
+                    value={selectedSliceImageLayer.imageTransform.y}
+                    onCommit={(y) =>
+                      updateSliceImageLayerTransform(selectedSlice.id, selectedSliceImageLayer.id, {
+                        y,
+                      })
+                    }
+                  />
+                </label>
+              </div>
+            </>
+          ) : null}
         </section>
       ) : null}
     </aside>

@@ -53,6 +53,13 @@ export interface SliceImageTransform {
   rotation: number;
 }
 
+export interface SliceImageLayer {
+  id: string;
+  name: string;
+  assetId: AssetId | null;
+  imageTransform: SliceImageTransform;
+}
+
 export interface ChartSlice {
   id: string;
   label: string;
@@ -60,6 +67,8 @@ export interface ChartSlice {
   value: number;
   assetId: AssetId | null;
   imageTransform: SliceImageTransform;
+  imageLayers: SliceImageLayer[];
+  selectedImageLayerId: string | null;
 }
 
 export interface PieChartSettings {

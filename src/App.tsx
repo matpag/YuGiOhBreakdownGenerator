@@ -1,5 +1,5 @@
-import { useEffect, useRef } from "react";
-import { Download, FileArchive, FolderOpen } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { Download, FileArchive, FolderOpen, Moon, Sun } from "lucide-react";
 import { BreakdownStage } from "./components/BreakdownStage";
 import { EditorSidebar } from "./components/EditorSidebar";
 import { ImageLibrarySidebar } from "./components/ImageLibrarySidebar";
@@ -7,8 +7,13 @@ import { registerEmbeddedFonts } from "./lib/fonts";
 import { exportBreakdownDocument, importBreakdownDocument } from "./lib/projectArchive";
 import { useProjectStore } from "./store/projectStore";
 
+type Theme = "light" | "dark";
+
 export default function App() {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [theme, setTheme] = useState<Theme>(() =>
+    window.localStorage.getItem("graphic-templater-theme") === "dark" ? "dark" : "light",
+  );
   const project = useProjectStore((state) => state.project);
   const assets = useProjectStore((state) => state.assets);
   const loadDocument = useProjectStore((state) => state.loadDocument);
@@ -17,6 +22,11 @@ export default function App() {
   useEffect(() => {
     registerEmbeddedFonts(project.fonts, assets);
   }, [assets, project.fonts]);
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme;
+    window.localStorage.setItem("graphic-templater-theme", theme);
+  }, [theme]);
 
   async function handleSaveProject() {
     const blob = await exportBreakdownDocument({ project, assets });
@@ -62,6 +72,16 @@ export default function App() {
           </button>
           <button type="button" title="Export PNG" onClick={exportPng}>
             <Download size={18} />
+          </button>
+          <button
+            className="theme-toggle"
+            type="button"
+            title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+            aria-pressed={theme === "dark"}
+            onClick={() => setTheme((currentTheme) => (currentTheme === "dark" ? "light" : "dark"))}
+          >
+            {theme === "dark" ? <Sun size={18} /> : <Moon size={18} />}
+            <span>{theme === "dark" ? "Light" : "Dark"}</span>
           </button>
         </div>
       </header>

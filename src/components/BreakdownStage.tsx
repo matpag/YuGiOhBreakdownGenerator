@@ -8,7 +8,12 @@ import {
   traceWedgePath,
 } from "../lib/geometry";
 import { useProjectStore } from "../store/projectStore";
-import type { ChartSlice, ProjectAsset, SliceImageTransform } from "../types/project";
+import type {
+  ChartSlice,
+  ProjectAsset,
+  SliceImageLayer,
+  SliceImageTransform,
+} from "../types/project";
 import type { SliceGeometry } from "../lib/geometry";
 
 const HIT_FILL = "rgba(255,255,255,0.001)";
@@ -82,9 +87,15 @@ interface SliceImageEditorProps {
   geometry: SliceGeometry;
   image: HTMLImageElement | null;
   isSelected: boolean;
+  layer: SliceImageLayer;
   radius: number;
   setSelectedSlice: (sliceId: string) => void;
-  updateSlice: (sliceId: string, updates: Partial<ChartSlice>) => void;
+  setSelectedSliceImageLayer: (sliceId: string, layerId: string) => void;
+  updateSliceImageLayerTransform: (
+    sliceId: string,
+    layerId: string,
+    updates: Partial<SliceImageTransform>,
+  ) => void;
 }
 
 interface DraftZoomInputProps {
@@ -96,13 +107,15 @@ function SliceImageEditor({
   geometry,
   image,
   isSelected,
+  layer,
   radius,
   setSelectedSlice,
-  updateSlice,
+  setSelectedSliceImageLayer,
+  updateSliceImageLayerTransform,
 }: SliceImageEditorProps) {
   const imageRef = useRef<Konva.Image>(null);
   const transformerRef = useRef<Konva.Transformer>(null);
-  const transform = geometry.slice.imageTransform;
+  const transform = layer.imageTransform;
   const imageSize = getSliceImageSize(image, radius);
 
   useEffect(() => {
@@ -136,14 +149,12 @@ function SliceImageEditor({
 
     node.scale({ x: nextScale, y: nextScale });
 
-    updateSlice(geometry.slice.id, {
-      imageTransform: {
-        ...transform,
-        x: node.x(),
-        y: node.y(),
-        scale: nextScale,
-        rotation: node.rotation(),
-      },
+    updateSliceImageLayerTransform(geometry.slice.id, layer.id, {
+      ...transform,
+      x: node.x(),
+      y: node.y(),
+      scale: nextScale,
+      rotation: node.rotation(),
     });
   }
 
@@ -158,12 +169,15 @@ function SliceImageEditor({
     const nextScale =
       event.evt.deltaY < 0 ? transform.scale * ZOOM_FACTOR : transform.scale / ZOOM_FACTOR;
 
-    updateSlice(geometry.slice.id, {
-      imageTransform: {
-        ...transform,
-        scale: clamp(nextScale, MIN_IMAGE_SCALE, MAX_IMAGE_SCALE),
-      },
+    updateSliceImageLayerTransform(geometry.slice.id, layer.id, {
+      ...transform,
+      scale: clamp(nextScale, MIN_IMAGE_SCALE, MAX_IMAGE_SCALE),
     });
+  }
+
+  function selectLayer() {
+    setSelectedSlice(geometry.slice.id);
+    setSelectedSliceImageLayer(geometry.slice.id, layer.id);
   }
 
   return (
@@ -180,18 +194,16 @@ function SliceImageEditor({
           height={imageSize.height}
           offsetX={imageSize.width / 2}
           offsetY={imageSize.height / 2}
-          onClick={() => setSelectedSlice(geometry.slice.id)}
+          onClick={selectLayer}
           onDragEnd={(event) => commitImageTransform(event.target as Konva.Image)}
           onDragMove={(event) => {
-            updateSlice(geometry.slice.id, {
-              imageTransform: {
-                ...transform,
-                x: event.target.x(),
-                y: event.target.y(),
-              },
+            updateSliceImageLayerTransform(geometry.slice.id, layer.id, {
+              ...transform,
+              x: event.target.x(),
+              y: event.target.y(),
             });
           }}
-          onTap={() => setSelectedSlice(geometry.slice.id)}
+          onTap={selectLayer}
           onTransformEnd={(event) => commitImageTransform(event.target as Konva.Image)}
           onWheel={handleImageWheel}
           rotation={transform.rotation}
@@ -309,7 +321,10 @@ export function BreakdownStage() {
   const project = useProjectStore((state) => state.project);
   const assets = useProjectStore((state) => state.assets);
   const setSelectedSlice = useProjectStore((state) => state.setSelectedSlice);
-  const updateSlice = useProjectStore((state) => state.updateSlice);
+  const setSelectedSliceImageLayer = useProjectStore((state) => state.setSelectedSliceImageLayer);
+  const updateSliceImageLayerTransform = useProjectStore(
+    (state) => state.updateSliceImageLayerTransform,
+  );
   const fitScale = Math.min(
     Math.max((viewportSize.width - CANVAS_PADDING) / project.canvas.width, 0.05),
     Math.max((viewportSize.height - CANVAS_PADDING) / project.canvas.height, 0.05),
@@ -340,34 +355,31 @@ export function BreakdownStage() {
     return () => observer.disconnect();
   }, []);
 
-  const updateSliceImageTransform = useCallback(
-    (sliceId: string, imageTransform: SliceImageTransform) => {
-      updateSlice(sliceId, { imageTransform });
-    },
-    [updateSlice],
-  );
-
   const handleSliceWheel = useCallback(
-    (event: Konva.KonvaEventObject<WheelEvent>, slice: ChartSlice, canTransformImage: boolean) => {
-      if (!canTransformImage) {
+    (event: Konva.KonvaEventObject<WheelEvent>, slice: ChartSlice) => {
+      const activeLayer =
+        slice.imageLayers.find((layer) => layer.id === slice.selectedImageLayerId) ??
+        slice.imageLayers[0];
+
+      if (!activeLayer?.assetId) {
         return;
       }
 
       event.evt.preventDefault();
       event.cancelBubble = true;
 
-      const currentTransform = slice.imageTransform;
+      const currentTransform = activeLayer.imageTransform;
       const nextScale =
         event.evt.deltaY < 0
           ? currentTransform.scale * ZOOM_FACTOR
           : currentTransform.scale / ZOOM_FACTOR;
 
-      updateSliceImageTransform(slice.id, {
+      updateSliceImageLayerTransform(slice.id, activeLayer.id, {
         ...currentTransform,
         scale: clamp(nextScale, MIN_IMAGE_SCALE, MAX_IMAGE_SCALE),
       });
     },
-    [updateSliceImageTransform],
+    [updateSliceImageLayerTransform],
   );
 
   useEffect(() => {
@@ -476,9 +488,7 @@ export function BreakdownStage() {
           <Layer>
             <Group x={project.pieChart.x} y={project.pieChart.y}>
               {slices.map((geometry) => {
-                const sliceImage = geometry.slice.assetId ? assetImages[geometry.slice.assetId] : null;
                 const selected = project.pieChart.selectedSliceId === geometry.slice.id;
-                const canTransformImage = selected && Boolean(sliceImage);
 
                 return (
                   <Group key={geometry.slice.id}>
@@ -493,17 +503,26 @@ export function BreakdownStage() {
                       fill={HIT_FILL}
                       onClick={() => setSelectedSlice(geometry.slice.id)}
                       onTap={() => setSelectedSlice(geometry.slice.id)}
-                      onWheel={(event) => handleSliceWheel(event, geometry.slice, canTransformImage)}
+                      onWheel={(event) => {
+                        if (selected) {
+                          handleSliceWheel(event, geometry.slice);
+                        }
+                      }}
                       points={geometry.points}
                     />
-                    <SliceImageEditor
-                      geometry={geometry}
-                      image={sliceImage ?? null}
-                      isSelected={selected}
-                      radius={project.pieChart.radius}
-                      setSelectedSlice={setSelectedSlice}
-                      updateSlice={updateSlice}
-                    />
+                    {geometry.slice.imageLayers.map((layer) => (
+                      <SliceImageEditor
+                        geometry={geometry}
+                        image={layer.assetId ? assetImages[layer.assetId] ?? null : null}
+                        isSelected={selected && geometry.slice.selectedImageLayerId === layer.id}
+                        key={layer.id}
+                        layer={layer}
+                        radius={project.pieChart.radius}
+                        setSelectedSlice={setSelectedSlice}
+                        setSelectedSliceImageLayer={setSelectedSliceImageLayer}
+                        updateSliceImageLayerTransform={updateSliceImageLayerTransform}
+                      />
+                    ))}
                     <Line
                       closed
                       listening={false}
