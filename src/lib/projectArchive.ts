@@ -1,6 +1,7 @@
 import JSZip from "jszip";
 import { z } from "zod";
 import type { AssetId, BreakdownDocument, ProjectAsset } from "../types/project";
+import { isFontAsset } from "./fonts";
 import { breakdownProjectSchema, parseBreakdownDocument } from "./projectSchema";
 
 export const BREAKDOWN_ARCHIVE_EXTENSION = ".dhbreakdown";
@@ -8,7 +9,7 @@ export const BREAKDOWN_ARCHIVE_MIME_TYPE = "application/vnd.dhbreakdown+zip";
 
 const archiveAssetPathSchema = z
   .string()
-  .regex(/^assets\/[^/\\]+$/, "Asset files must live directly under assets/.");
+  .regex(/^(assets|fonts)\/[^/\\]+$/, "Asset files must live directly under assets/ or fonts/.");
 
 const archiveAssetSchema = z
   .object({
@@ -190,11 +191,12 @@ function binaryStringToBytes(binary: string): Uint8Array {
 function uniqueAssetArchivePath(asset: ProjectAsset, usedPaths: Set<string>): string {
   const extension = assetExtension(asset);
   const encodedId = encodeURIComponent(asset.id).replace(/\*/g, "%2A");
-  let path = `assets/${encodedId}${extension}`;
+  const directory = isFontAsset(asset) ? "fonts" : "assets";
+  let path = `${directory}/${encodedId}${extension}`;
   let suffix = 2;
 
   while (usedPaths.has(path)) {
-    path = `assets/${encodedId}-${suffix}${extension}`;
+    path = `${directory}/${encodedId}-${suffix}${extension}`;
     suffix += 1;
   }
 
@@ -219,6 +221,18 @@ function assetExtension(asset: ProjectAsset): string {
       return ".svg";
     case "image/webp":
       return ".webp";
+    case "font/ttf":
+    case "application/x-font-ttf":
+      return ".ttf";
+    case "font/otf":
+    case "application/x-font-otf":
+      return ".otf";
+    case "font/woff":
+    case "application/font-woff":
+      return ".woff";
+    case "font/woff2":
+    case "application/font-woff2":
+      return ".woff2";
     default:
       return "";
   }

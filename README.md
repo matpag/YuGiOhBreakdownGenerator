@@ -51,6 +51,10 @@ The manifest is JSON with `format: "dhbreakdown"` and `version: 1`. It stores th
 5. Upload an image for each slice.
 6. Export the final PNG at the original canvas size.
 
+## Embedded Fonts
+
+Font files can be uploaded into a project from the Embedded Fonts panel. Uploaded `.ttf`, `.otf`, `.woff`, and `.woff2` files are saved inside the `.dhbreakdown` archive under `fonts/`, registered with the browser through `FontFace`, and become available in the title and pie-label font dropdowns after the project is loaded.
+
 ## Starter Layout
 
 The default project starts at `1600x1600`, matching the provided breakdown images. The title is centered near the top, the chart is centered lower on the canvas at `x: 800`, `y: 900`, with a `540px` radius, and the logo placeholder sits in the lower-right area.

@@ -1,10 +1,16 @@
 import { useEffect, useState } from "react";
 import { ImagePlus, Minus, Plus } from "lucide-react";
 import { fileToAsset } from "../lib/assets";
+import {
+  FONT_FILE_ACCEPT,
+  inferFontFamilyFromFileName,
+  registerEmbeddedFont,
+} from "../lib/fonts";
 import { DEFAULT_LABEL_DISTANCE } from "../lib/geometry";
 import { useProjectStore } from "../store/projectStore";
 
 const FALLBACK_FONT_OPTIONS = [
+  "Berlin Sans FB",
   "Arial Black",
   "Arial",
   "Calibri",
@@ -43,6 +49,7 @@ export function EditorSidebar() {
   const updateSlice = useProjectStore((state) => state.updateSlice);
   const updateSliceImageTransform = useProjectStore((state) => state.updateSliceImageTransform);
   const addAsset = useProjectStore((state) => state.addAsset);
+  const addEmbeddedFont = useProjectStore((state) => state.addEmbeddedFont);
   const setBackgroundAsset = useProjectStore((state) => state.setBackgroundAsset);
   const setLogoAsset = useProjectStore((state) => state.setLogoAsset);
   const setSliceAsset = useProjectStore((state) => state.setSliceAsset);
@@ -52,6 +59,7 @@ export function EditorSidebar() {
   const [fontOptions, setFontOptions] = useState(() =>
     mergeFontOptions([
       ...FALLBACK_FONT_OPTIONS,
+      ...project.fonts.map((font) => font.family),
       project.title.fontFamily,
       project.pieChart.labelStyle.fontFamily,
     ]),
@@ -70,11 +78,12 @@ export function EditorSidebar() {
     setFontOptions((currentOptions) =>
       mergeFontOptions([
         ...currentOptions,
+        ...project.fonts.map((font) => font.family),
         project.title.fontFamily,
         project.pieChart.labelStyle.fontFamily,
       ]),
     );
-  }, [project.title.fontFamily, project.pieChart.labelStyle.fontFamily]);
+  }, [project.fonts, project.title.fontFamily, project.pieChart.labelStyle.fontFamily]);
 
   async function loadSystemFonts() {
     if (fontAccessRequested || !window.queryLocalFonts) {
@@ -89,6 +98,7 @@ export function EditorSidebar() {
         mergeFontOptions([
           ...currentOptions,
           ...localFonts.map((font) => font.family),
+          ...project.fonts.map((font) => font.family),
           project.title.fontFamily,
           project.pieChart.labelStyle.fontFamily,
         ]),
@@ -97,6 +107,7 @@ export function EditorSidebar() {
       setFontOptions((currentOptions) =>
         mergeFontOptions([
           ...currentOptions,
+          ...project.fonts.map((font) => font.family),
           project.title.fontFamily,
           project.pieChart.labelStyle.fontFamily,
         ]),
@@ -127,6 +138,31 @@ export function EditorSidebar() {
     if (target === "slice" && sliceId) {
       setSliceAsset(sliceId, assetId);
     }
+  }
+
+  async function handleFontUpload(file: File | undefined) {
+    if (!file) {
+      return;
+    }
+
+    const inferredFamily = inferFontFamilyFromFileName(file.name);
+    const family = window.prompt("Font family name", inferredFamily)?.trim();
+
+    if (!family) {
+      return;
+    }
+
+    const asset = await fileToAsset(file);
+    const assetId = addAsset(asset);
+    const embeddedFont = {
+      id: crypto.randomUUID(),
+      family,
+      assetId,
+    };
+
+    addEmbeddedFont(embeddedFont);
+    await registerEmbeddedFont(embeddedFont, asset);
+    setFontOptions((currentOptions) => mergeFontOptions([...currentOptions, family]));
   }
 
   function readNumber(value: string, fallback: number, min?: number) {
@@ -332,6 +368,32 @@ export function EditorSidebar() {
               accept="image/*"
               onChange={(event) => {
                 handleAssetUpload(event.target.files?.[0], "logo");
+                event.currentTarget.value = "";
+              }}
+            />
+          </label>
+        </div>
+      </section>
+
+      <section className="panel">
+        <h2>Embedded Fonts</h2>
+        <div className="asset-control">
+          <span>
+            Project fonts
+            <small>
+              {project.fonts.length > 0
+                ? project.fonts.map((font) => font.family).join(", ")
+                : "No embedded fonts"}
+            </small>
+          </span>
+          <label className="file-button">
+            <ImagePlus size={16} />
+            Upload
+            <input
+              type="file"
+              accept={FONT_FILE_ACCEPT}
+              onChange={(event) => {
+                handleFontUpload(event.target.files?.[0]);
                 event.currentTarget.value = "";
               }}
             />

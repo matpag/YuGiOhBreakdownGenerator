@@ -5,6 +5,7 @@ import type {
   BreakdownDocument,
   CanvasSettings,
   ChartSlice,
+  EmbeddedFont,
   PieChartSettings,
   ProjectAsset,
   SliceImageTransform,
@@ -27,6 +28,7 @@ interface ProjectState extends BreakdownDocument {
   addSlice: () => void;
   removeSelectedSlice: () => void;
   addAsset: (asset: ProjectAsset) => AssetId;
+  addEmbeddedFont: (font: EmbeddedFont) => void;
   setBackgroundAsset: (assetId: AssetId) => void;
   setLogoAsset: (assetId: AssetId) => void;
   setSliceAsset: (sliceId: string, assetId: AssetId) => void;
@@ -38,6 +40,7 @@ function normalizeDocument(document: BreakdownDocument): BreakdownDocument {
     assets: document.assets,
     project: {
       ...document.project,
+      fonts: document.project.fonts ?? [],
       background: {
         ...document.project.background,
         width: document.project.canvas.width,
@@ -193,6 +196,19 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
 
     return asset.id;
   },
+  addEmbeddedFont: (font) =>
+    set((state) => ({
+      project: {
+        ...state.project,
+        fonts: [
+          ...state.project.fonts.filter(
+            (existingFont) =>
+              existingFont.id !== font.id && existingFont.family !== font.family,
+          ),
+          font,
+        ],
+      },
+    })),
   setBackgroundAsset: (assetId) =>
     set((state) => ({
       project: {

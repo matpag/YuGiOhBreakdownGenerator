@@ -33,6 +33,12 @@ export interface ImageLayer {
   fit: "cover" | "contain";
 }
 
+export interface EmbeddedFont {
+  id: string;
+  family: string;
+  assetId: AssetId;
+}
+
 export interface SliceImageTransform {
   x: number;
   y: number;
@@ -67,6 +73,7 @@ export interface BreakdownProject {
   title: TextStyle;
   background: ImageLayer;
   logo: ImageLayer;
+  fonts: EmbeddedFont[];
   pieChart: PieChartSettings;
 }
 

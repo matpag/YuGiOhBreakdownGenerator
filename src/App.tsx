@@ -1,7 +1,8 @@
-import { useRef } from "react";
+import { useEffect, useRef } from "react";
 import { Download, FileArchive, FolderOpen } from "lucide-react";
 import { BreakdownStage } from "./components/BreakdownStage";
 import { EditorSidebar } from "./components/EditorSidebar";
+import { registerEmbeddedFonts } from "./lib/fonts";
 import { exportBreakdownDocument, importBreakdownDocument } from "./lib/projectArchive";
 import { useProjectStore } from "./store/projectStore";
 
@@ -11,6 +12,10 @@ export default function App() {
   const assets = useProjectStore((state) => state.assets);
   const loadDocument = useProjectStore((state) => state.loadDocument);
   const exportPng = useProjectStore((state) => state.exportPng);
+
+  useEffect(() => {
+    registerEmbeddedFonts(project.fonts, assets);
+  }, [assets, project.fonts]);
 
   async function handleSaveProject() {
     const blob = await exportBreakdownDocument({ project, assets });

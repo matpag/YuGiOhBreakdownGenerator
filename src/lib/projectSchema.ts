@@ -48,6 +48,14 @@ export const imageLayerSchema = z
   })
   .strict();
 
+export const embeddedFontSchema = z
+  .object({
+    id: z.string().min(1),
+    family: z.string().min(1),
+    assetId: assetIdSchema,
+  })
+  .strict();
+
 export const sliceImageTransformSchema = z
   .object({
     x: finiteNumberSchema,
@@ -77,7 +85,7 @@ export const pieChartSettingsSchema = z
     borderColor: z.string().min(1),
     borderWidth: nonNegativeNumberSchema,
     labelStyle: labelTextStyleSchema.default({
-      fontFamily: "Arial Black",
+      fontFamily: "Berlin Sans FB",
       fontSize: 40,
       fill: "#ffffff",
       stroke: "#000000",
@@ -118,6 +126,7 @@ export const breakdownProjectSchema = z
     title: textStyleSchema,
     background: imageLayerSchema,
     logo: imageLayerSchema,
+    fonts: z.array(embeddedFontSchema).default([]),
     pieChart: pieChartSettingsSchema,
   })
   .strict();
@@ -142,6 +151,7 @@ export const breakdownDocumentSchema = z
     const referencedAssetIds = [
       document.project.background.assetId,
       document.project.logo.assetId,
+      ...document.project.fonts.map((font) => font.assetId),
       ...document.project.pieChart.slices.map((slice) => slice.assetId),
     ].filter((assetId): assetId is string => assetId !== null);
 
