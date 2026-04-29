@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react";
 import { Download, FileArchive, FolderOpen } from "lucide-react";
 import { BreakdownStage } from "./components/BreakdownStage";
 import { EditorSidebar } from "./components/EditorSidebar";
+import { ImageLibrarySidebar } from "./components/ImageLibrarySidebar";
 import { registerEmbeddedFonts } from "./lib/fonts";
 import { exportBreakdownDocument, importBreakdownDocument } from "./lib/projectArchive";
 import { useProjectStore } from "./store/projectStore";
@@ -68,6 +69,7 @@ export default function App() {
       <section className="workspace">
         <EditorSidebar />
         <BreakdownStage />
+        <ImageLibrarySidebar />
       </section>
     </main>
   );

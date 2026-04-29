@@ -120,7 +120,7 @@ textarea {
 
 .workspace {
   display: grid;
-  grid-template-columns: 420px 1fr;
+  grid-template-columns: 420px minmax(0, 1fr) auto;
   min-height: 0;
 }
 
@@ -180,6 +180,35 @@ textarea {
   gap: 18px;
   overflow: auto;
   padding: 18px;
+}
+
+.library-sidebar {
+  background: #ffffff;
+  border-left: 1px solid #dce1ea;
+  display: grid;
+  gap: 12px;
+  grid-template-rows: auto minmax(0, 1fr);
+  overflow: auto;
+  padding: 18px;
+  width: 360px;
+}
+
+.library-sidebar-collapsed {
+  justify-items: center;
+  overflow: hidden;
+  padding: 12px 8px;
+  width: 52px;
+}
+
+.library-collapse-button {
+  justify-content: center;
+  min-height: 34px;
+  padding: 0;
+  width: 34px;
+}
+
+.library-panel {
+  align-content: start;
 }
 
 .panel {
