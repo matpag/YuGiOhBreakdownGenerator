@@ -6,6 +6,7 @@ import type {
   CanvasSettings,
   ChartSlice,
   EmbeddedFont,
+  ImageLibraryItem,
   PieChartSettings,
   ProjectAsset,
   SliceImageTransform,
@@ -29,6 +30,8 @@ interface ProjectState extends BreakdownDocument {
   removeSelectedSlice: () => void;
   addAsset: (asset: ProjectAsset) => AssetId;
   addEmbeddedFont: (font: EmbeddedFont) => void;
+  addImageLibraryItem: (item: ImageLibraryItem) => void;
+  removeImageLibraryItem: (itemId: string) => void;
   setBackgroundAsset: (assetId: AssetId) => void;
   setLogoAsset: (assetId: AssetId) => void;
   setSliceAsset: (sliceId: string, assetId: AssetId) => void;
@@ -41,6 +44,7 @@ function normalizeDocument(document: BreakdownDocument): BreakdownDocument {
     project: {
       ...document.project,
       fonts: document.project.fonts ?? [],
+      imageLibrary: document.project.imageLibrary ?? [],
       background: {
         ...document.project.background,
         width: document.project.canvas.width,
@@ -209,6 +213,46 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
         ],
       },
     })),
+  addImageLibraryItem: (item) =>
+    set((state) => ({
+      project: {
+        ...state.project,
+        imageLibrary: [
+          ...state.project.imageLibrary.filter(
+            (existingItem) => existingItem.id !== item.id && existingItem.assetId !== item.assetId,
+          ),
+          item,
+        ],
+      },
+    })),
+  removeImageLibraryItem: (itemId) =>
+    set((state) => {
+      const item = state.project.imageLibrary.find(
+        (libraryItem) => libraryItem.id === itemId,
+      );
+      const imageLibrary = state.project.imageLibrary.filter(
+        (libraryItem) => libraryItem.id !== itemId,
+      );
+
+      if (!item || isAssetReferenced(state.project, imageLibrary, item.assetId)) {
+        return {
+          project: {
+            ...state.project,
+            imageLibrary,
+          },
+        };
+      }
+
+      const { [item.assetId]: _removedAsset, ...assets } = state.assets;
+
+      return {
+        assets,
+        project: {
+          ...state.project,
+          imageLibrary,
+        },
+      };
+    }),
   setBackgroundAsset: (assetId) =>
     set((state) => ({
       project: {
@@ -234,3 +278,17 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
     window.dispatchEvent(new CustomEvent("graphic-templater:export-png"));
   },
 }));
+
+function isAssetReferenced(
+  project: BreakdownDocument["project"],
+  imageLibrary: ImageLibraryItem[],
+  assetId: AssetId,
+) {
+  return [
+    project.background.assetId,
+    project.logo.assetId,
+    ...project.fonts.map((font) => font.assetId),
+    ...imageLibrary.map((item) => item.assetId),
+    ...project.pieChart.slices.map((slice) => slice.assetId),
+  ].includes(assetId);
+}

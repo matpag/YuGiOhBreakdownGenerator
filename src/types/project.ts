@@ -39,6 +39,13 @@ export interface EmbeddedFont {
   assetId: AssetId;
 }
 
+export interface ImageLibraryItem {
+  id: string;
+  assetId: AssetId;
+  name: string;
+  createdAt: string;
+}
+
 export interface SliceImageTransform {
   x: number;
   y: number;
@@ -74,6 +81,7 @@ export interface BreakdownProject {
   background: ImageLayer;
   logo: ImageLayer;
   fonts: EmbeddedFont[];
+  imageLibrary: ImageLibraryItem[];
   pieChart: PieChartSettings;
 }
 

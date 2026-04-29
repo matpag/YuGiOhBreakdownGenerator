@@ -56,6 +56,15 @@ export const embeddedFontSchema = z
   })
   .strict();
 
+export const imageLibraryItemSchema = z
+  .object({
+    id: z.string().min(1),
+    assetId: assetIdSchema,
+    name: z.string().min(1),
+    createdAt: z.string().min(1),
+  })
+  .strict();
+
 export const sliceImageTransformSchema = z
   .object({
     x: finiteNumberSchema,
@@ -127,6 +136,7 @@ export const breakdownProjectSchema = z
     background: imageLayerSchema,
     logo: imageLayerSchema,
     fonts: z.array(embeddedFontSchema).default([]),
+    imageLibrary: z.array(imageLibraryItemSchema).default([]),
     pieChart: pieChartSettingsSchema,
   })
   .strict();
@@ -152,6 +162,7 @@ export const breakdownDocumentSchema = z
       document.project.background.assetId,
       document.project.logo.assetId,
       ...document.project.fonts.map((font) => font.assetId),
+      ...document.project.imageLibrary.map((item) => item.assetId),
       ...document.project.pieChart.slices.map((slice) => slice.assetId),
     ].filter((assetId): assetId is string => assetId !== null);
 

@@ -193,6 +193,12 @@ textarea {
   margin: 0;
 }
 
+.panel-heading-row {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+}
+
 .asset-control {
   align-items: center;
   border: 1px solid #dce1ea;
@@ -251,6 +257,70 @@ textarea {
 
 .file-button input {
   display: none;
+}
+
+.field-error {
+  background: #fff2f1;
+  border: 1px solid #f1b9b4;
+  border-radius: 6px;
+  color: #9c2f28;
+  font-size: 12px;
+  margin: 0;
+  padding: 8px 10px;
+}
+
+.asset-grid {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.asset-card {
+  border: 1px solid #dce1ea;
+  border-radius: 8px;
+  display: grid;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.asset-card img {
+  aspect-ratio: 1;
+  background: #eef2f7;
+  display: block;
+  object-fit: cover;
+  width: 100%;
+}
+
+.asset-card-body {
+  display: grid;
+  gap: 8px;
+  padding: 8px;
+}
+
+.asset-card-body strong {
+  color: #18202f;
+  font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.asset-card-actions {
+  display: grid;
+  gap: 6px;
+  grid-template-columns: 1fr 1fr;
+}
+
+.asset-card-actions button {
+  font-size: 12px;
+  justify-content: center;
+  min-height: 30px;
+  min-width: 0;
+  padding: 0 8px;
+}
+
+.icon-button {
+  padding: 0;
 }
 
 .canvas-wrap {

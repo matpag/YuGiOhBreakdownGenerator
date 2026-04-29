@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import { ImagePlus, Minus, Plus } from "lucide-react";
-import { fileToAsset } from "../lib/assets";
+import { ImagePlus, Minus, Plus, Trash2 } from "lucide-react";
+import { fileToAsset, validateImageFile } from "../lib/assets";
 import {
   FONT_FILE_ACCEPT,
   inferFontFamilyFromFileName,
@@ -57,6 +57,8 @@ export function EditorSidebar() {
   const updateSliceImageTransform = useProjectStore((state) => state.updateSliceImageTransform);
   const addAsset = useProjectStore((state) => state.addAsset);
   const addEmbeddedFont = useProjectStore((state) => state.addEmbeddedFont);
+  const addImageLibraryItem = useProjectStore((state) => state.addImageLibraryItem);
+  const removeImageLibraryItem = useProjectStore((state) => state.removeImageLibraryItem);
   const setBackgroundAsset = useProjectStore((state) => state.setBackgroundAsset);
   const setLogoAsset = useProjectStore((state) => state.setLogoAsset);
   const setSliceAsset = useProjectStore((state) => state.setSliceAsset);
@@ -70,6 +72,7 @@ export function EditorSidebar() {
     ]),
   );
   const [fontAccessRequested, setFontAccessRequested] = useState(false);
+  const [imageUploadError, setImageUploadError] = useState<string | null>(null);
 
   useEffect(() => {
     setFontOptions((currentOptions) =>
@@ -121,8 +124,23 @@ export function EditorSidebar() {
       return;
     }
 
+    const error = validateImageFile(file);
+
+    if (error) {
+      setImageUploadError(error);
+      return;
+    }
+
+    setImageUploadError(null);
+
     const asset = await fileToAsset(file);
     const assetId = addAsset(asset);
+    addImageLibraryItem({
+      id: crypto.randomUUID(),
+      assetId,
+      name: asset.name,
+      createdAt: new Date().toISOString(),
+    });
 
     if (target === "background") {
       setBackgroundAsset(assetId);
@@ -134,6 +152,35 @@ export function EditorSidebar() {
 
     if (target === "slice" && sliceId) {
       setSliceAsset(sliceId, assetId);
+    }
+  }
+
+  async function handleLibraryUpload(fileList: FileList | null) {
+    const files = Array.from(fileList ?? []);
+
+    if (files.length === 0) {
+      return;
+    }
+
+    const errors = files.map(validateImageFile).filter((error): error is string => error !== null);
+
+    if (errors.length > 0) {
+      setImageUploadError(errors[0]);
+      return;
+    }
+
+    setImageUploadError(null);
+
+    for (const file of files) {
+      const asset = await fileToAsset(file);
+      const assetId = addAsset(asset);
+
+      addImageLibraryItem({
+        id: crypto.randomUUID(),
+        assetId,
+        name: asset.name,
+        createdAt: new Date().toISOString(),
+      });
     }
   }
 
@@ -278,6 +325,7 @@ export function EditorSidebar() {
 
       <section className="panel">
         <h2>Static Images</h2>
+        {imageUploadError ? <p className="field-error">{imageUploadError}</p> : null}
         <div className="asset-control">
           <span>
             Background
@@ -313,6 +361,80 @@ export function EditorSidebar() {
               }}
             />
           </label>
+        </div>
+      </section>
+
+      <section className="panel">
+        <div className="panel-heading-row">
+          <h2>Image Library</h2>
+          <label className="file-button">
+            <ImagePlus size={16} />
+            Add
+            <input
+              type="file"
+              accept="image/*"
+              multiple
+              onChange={(event) => {
+                handleLibraryUpload(event.target.files);
+                event.currentTarget.value = "";
+              }}
+            />
+          </label>
+        </div>
+        {imageUploadError ? <p className="field-error">{imageUploadError}</p> : null}
+        <div className="asset-grid">
+          {project.imageLibrary.map((item) => {
+            const asset = assets[item.assetId];
+
+            if (!asset) {
+              return null;
+            }
+
+            return (
+              <article className="asset-card" key={item.id}>
+                <img alt={item.name} src={asset.dataUrl} />
+                <div className="asset-card-body">
+                  <strong title={item.name}>{item.name}</strong>
+                  <div className="asset-card-actions">
+                    <button
+                      type="button"
+                      title="Use as background"
+                      onClick={() => setBackgroundAsset(item.assetId)}
+                    >
+                      BG
+                    </button>
+                    <button
+                      type="button"
+                      title="Use as logo"
+                      onClick={() => setLogoAsset(item.assetId)}
+                    >
+                      Logo
+                    </button>
+                    <button
+                      type="button"
+                      title="Use on selected slice"
+                      disabled={!selectedSlice}
+                      onClick={() => {
+                        if (selectedSlice) {
+                          setSliceAsset(selectedSlice.id, item.assetId);
+                        }
+                      }}
+                    >
+                      Slice
+                    </button>
+                    <button
+                      className="icon-button"
+                      type="button"
+                      title="Remove from library"
+                      onClick={() => removeImageLibraryItem(item.id)}
+                    >
+                      <Trash2 size={15} />
+                    </button>
+                  </div>
+                </div>
+              </article>
+            );
+          })}
         </div>
       </section>
 

@@ -33,6 +33,7 @@ export const defaultDocument: BreakdownDocument = {
       fit: "contain",
     },
     fonts: [],
+    imageLibrary: [],
     pieChart: {
       x: 540,
       y: 600,
