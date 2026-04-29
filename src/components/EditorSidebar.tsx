@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { ImagePlus, Minus, Plus } from "lucide-react";
 import { fileToAsset } from "../lib/assets";
+import { DEFAULT_LABEL_DISTANCE } from "../lib/geometry";
 import { useProjectStore } from "../store/projectStore";
 
 const FALLBACK_FONT_OPTIONS = [
@@ -519,6 +520,23 @@ export function EditorSidebar() {
               onChange={(event) =>
                 updateSlice(selectedSlice.id, {
                   value: readNumber(event.target.value, selectedSlice.value, 1),
+                })
+              }
+            />
+          </label>
+          <label>
+            Label distance
+            <input
+              min="0"
+              type="number"
+              value={selectedSlice.labelDistance ?? DEFAULT_LABEL_DISTANCE}
+              onChange={(event) =>
+                updateSlice(selectedSlice.id, {
+                  labelDistance: readNumber(
+                    event.target.value,
+                    selectedSlice.labelDistance ?? DEFAULT_LABEL_DISTANCE,
+                    0,
+                  ),
                 })
               }
             />

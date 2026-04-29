@@ -61,6 +61,7 @@ export const chartSliceSchema = z
   .object({
     id: z.string().min(1),
     label: z.string(),
+    labelDistance: nonNegativeNumberSchema.default(96),
     value: nonNegativeNumberSchema,
     assetId: nullableAssetIdSchema,
     imageTransform: sliceImageTransformSchema,

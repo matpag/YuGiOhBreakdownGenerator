@@ -157,6 +157,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
               {
                 id,
                 label: `Deck ${index}`,
+                labelDistance: 96,
                 value: 1,
                 assetId: null,
                 imageTransform: { x: 0, y: 0, scale: 1, rotation: 0 },

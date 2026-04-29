@@ -61,6 +61,7 @@ interface DataUrlPayload {
 
 export async function exportBreakdownDocument(document: BreakdownDocument): Promise<Blob> {
   const validatedDocument = parseBreakdownDocument(document);
+  const validatedProject = breakdownProjectSchema.parse(validatedDocument.project);
   const zip = new JSZip();
   const manifestAssets: ArchiveManifest["assets"] = {};
   const assetPaths = new Set<string>();
@@ -82,7 +83,7 @@ export async function exportBreakdownDocument(document: BreakdownDocument): Prom
   const manifest: ArchiveManifest = {
     format: "dhbreakdown",
     version: 1,
-    project: validatedDocument.project,
+    project: validatedProject,
     assets: manifestAssets,
   };
 

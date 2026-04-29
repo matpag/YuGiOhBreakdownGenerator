@@ -1,7 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Konva from "konva";
 import { Circle, Group, Image, Layer, Line, Rect, Stage, Text, Transformer } from "react-konva";
-import { getSliceGeometries, labelPosition, traceWedgePath } from "../lib/geometry";
+import {
+  DEFAULT_LABEL_DISTANCE,
+  getSliceGeometries,
+  labelPosition,
+  traceWedgePath,
+} from "../lib/geometry";
 import { useProjectStore } from "../store/projectStore";
 import type { ChartSlice, ProjectAsset, SliceImageTransform } from "../types/project";
 import type { SliceGeometry } from "../lib/geometry";
@@ -402,7 +407,11 @@ export function BreakdownStage() {
               />
             </Group>
             {slices.map((geometry) => {
-              const position = labelPosition(project.pieChart, geometry.midAngle);
+              const position = labelPosition(
+                project.pieChart,
+                geometry.midAngle,
+                geometry.slice.labelDistance ?? DEFAULT_LABEL_DISTANCE,
+              );
               const labelStyle = project.pieChart.labelStyle;
 
               return (

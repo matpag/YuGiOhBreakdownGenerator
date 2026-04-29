@@ -16,6 +16,7 @@ interface PathContext {
 }
 
 const toRadians = (degrees: number) => (degrees * Math.PI) / 180;
+export const DEFAULT_LABEL_DISTANCE = 96;
 
 export function getSliceGeometries(chart: PieChartSettings): SliceGeometry[] {
   const total = chart.slices.reduce((sum, slice) => sum + Math.max(slice.value, 0), 0);
@@ -65,8 +66,12 @@ export function traceWedgePath(context: PathContext, points: number[]) {
   context.closePath();
 }
 
-export function labelPosition(chart: PieChartSettings, angle: number) {
-  const distance = chart.radius + 96;
+export function labelPosition(
+  chart: PieChartSettings,
+  angle: number,
+  labelDistance = DEFAULT_LABEL_DISTANCE,
+) {
+  const distance = chart.radius + labelDistance;
   return {
     x: chart.x + Math.cos(toRadians(angle)) * distance,
     y: chart.y + Math.sin(toRadians(angle)) * distance,

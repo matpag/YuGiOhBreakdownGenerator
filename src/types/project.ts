@@ -43,6 +43,7 @@ export interface SliceImageTransform {
 export interface ChartSlice {
   id: string;
   label: string;
+  labelDistance?: number;
   value: number;
   assetId: AssetId | null;
   imageTransform: SliceImageTransform;
