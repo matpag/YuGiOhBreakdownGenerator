@@ -128,6 +128,7 @@ function SliceImageEditor({
 
     if (isSelected && imageNode) {
       transformer.nodes([imageNode]);
+      transformer.moveToTop();
       transformer.getLayer()?.batchDraw();
       return;
     }
