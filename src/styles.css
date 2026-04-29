@@ -271,8 +271,8 @@ textarea {
 
 .asset-grid {
   display: grid;
-  gap: 10px;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
 .asset-card {
@@ -293,13 +293,13 @@ textarea {
 
 .asset-card-body {
   display: grid;
-  gap: 8px;
-  padding: 8px;
+  gap: 6px;
+  padding: 6px;
 }
 
 .asset-card-body strong {
   color: #18202f;
-  font-size: 12px;
+  font-size: 11px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -307,20 +307,27 @@ textarea {
 
 .asset-card-actions {
   display: grid;
-  gap: 6px;
+  gap: 4px;
   grid-template-columns: 1fr 1fr;
 }
 
 .asset-card-actions button {
-  font-size: 12px;
+  font-size: 11px;
+  gap: 0;
   justify-content: center;
-  min-height: 30px;
+  min-height: 26px;
   min-width: 0;
-  padding: 0 8px;
+  padding: 0 4px;
 }
 
 .icon-button {
   padding: 0;
+}
+
+.empty-state {
+  color: #667287;
+  font-size: 12px;
+  margin: 0;
 }
 
 .canvas-wrap {

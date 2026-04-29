@@ -73,6 +73,7 @@ export function EditorSidebar() {
   );
   const [fontAccessRequested, setFontAccessRequested] = useState(false);
   const [imageUploadError, setImageUploadError] = useState<string | null>(null);
+  const [imageLibrarySearch, setImageLibrarySearch] = useState("");
 
   useEffect(() => {
     setFontOptions((currentOptions) =>
@@ -214,6 +215,17 @@ export function EditorSidebar() {
   const selectedSlice =
     project.pieChart.slices.find((slice) => slice.id === project.pieChart.selectedSliceId) ?? null;
   const selectedSliceAsset = selectedSlice?.assetId ? assets[selectedSlice.assetId] : null;
+  const normalizedImageLibrarySearch = imageLibrarySearch.trim().toLowerCase();
+  const filteredImageLibrary = project.imageLibrary.filter((item) => {
+    if (!normalizedImageLibrarySearch) {
+      return true;
+    }
+
+    const asset = assets[item.assetId];
+    return [item.name, asset?.name ?? ""].some((name) =>
+      name.toLowerCase().includes(normalizedImageLibrarySearch),
+    );
+  });
 
   return (
     <aside className="sidebar">
@@ -382,8 +394,17 @@ export function EditorSidebar() {
           </label>
         </div>
         {imageUploadError ? <p className="field-error">{imageUploadError}</p> : null}
+        <label>
+          Search
+          <input
+            type="search"
+            placeholder="Find by image name"
+            value={imageLibrarySearch}
+            onChange={(event) => setImageLibrarySearch(event.target.value)}
+          />
+        </label>
         <div className="asset-grid">
-          {project.imageLibrary.map((item) => {
+          {filteredImageLibrary.map((item) => {
             const asset = assets[item.assetId];
 
             if (!asset) {
@@ -436,6 +457,9 @@ export function EditorSidebar() {
             );
           })}
         </div>
+        {filteredImageLibrary.length === 0 ? (
+          <p className="empty-state">No images match this search.</p>
+        ) : null}
       </section>
 
       <section className="panel">
