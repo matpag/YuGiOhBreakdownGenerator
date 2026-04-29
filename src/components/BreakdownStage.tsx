@@ -218,8 +218,10 @@ function SliceImageEditor({
         <Transformer
           ref={transformerRef}
           anchorCornerRadius={3}
-          anchorFill="#ffffff"
+          anchorFill="#2f80ed"
           anchorSize={14}
+          anchorStroke="#ffffff"
+          anchorStrokeWidth={2}
           borderDash={[8, 6]}
           borderStroke="#2f80ed"
           borderStrokeWidth={2}

@@ -497,6 +497,7 @@ textarea {
   justify-content: center;
   min-height: 30px;
   padding: 0;
+  width: 30px;
 }
 
 .slice-layer-upload:hover {
@@ -505,6 +506,14 @@ textarea {
 
 .slice-layer-upload input {
   display: none;
+}
+
+.slice-layer-row .icon-button {
+  align-items: center;
+  justify-content: center;
+  min-height: 30px;
+  padding: 0;
+  width: 30px;
 }
 
 .slice-row {
