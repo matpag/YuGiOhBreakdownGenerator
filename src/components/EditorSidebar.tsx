@@ -33,7 +33,6 @@ declare global {
 export function EditorSidebar() {
   const project = useProjectStore((state) => state.project);
   const assets = useProjectStore((state) => state.assets);
-  const selectedSlice = useProjectStore((state) => state.selectedSlice);
   const updateCanvas = useProjectStore((state) => state.updateCanvas);
   const setTitle = useProjectStore((state) => state.setTitle);
   const updateTitle = useProjectStore((state) => state.updateTitle);
@@ -104,7 +103,11 @@ export function EditorSidebar() {
     }
   }
 
-  async function handleAssetUpload(file: File | undefined, target: "background" | "logo" | "slice") {
+  async function handleAssetUpload(
+    file: File | undefined,
+    target: "background" | "logo" | "slice",
+    sliceId?: string,
+  ) {
     if (!file) {
       return;
     }
@@ -120,8 +123,8 @@ export function EditorSidebar() {
       setLogoAsset(assetId);
     }
 
-    if (target === "slice" && selectedSlice) {
-      setSliceAsset(selectedSlice.id, assetId);
+    if (target === "slice" && sliceId) {
+      setSliceAsset(sliceId, assetId);
     }
   }
 
@@ -150,6 +153,8 @@ export function EditorSidebar() {
 
   const backgroundAsset = project.background.assetId ? assets[project.background.assetId] : null;
   const logoAsset = project.logo.assetId ? assets[project.logo.assetId] : null;
+  const selectedSlice =
+    project.pieChart.slices.find((slice) => slice.id === project.pieChart.selectedSliceId) ?? null;
   const selectedSliceAsset = selectedSlice?.assetId ? assets[selectedSlice.assetId] : null;
 
   return (
@@ -530,7 +535,7 @@ export function EditorSidebar() {
                 type="file"
                 accept="image/*"
                 onChange={(event) => {
-                  handleAssetUpload(event.target.files?.[0], "slice");
+                  handleAssetUpload(event.target.files?.[0], "slice", selectedSlice.id);
                   event.currentTarget.value = "";
                 }}
               />

@@ -13,7 +13,6 @@ import type {
 
 interface ProjectState extends BreakdownDocument {
   project: BreakdownDocument["project"];
-  selectedSlice: ChartSlice | null;
   loadDocument: (document: BreakdownDocument) => void;
   updateCanvas: (updates: Partial<CanvasSettings>) => void;
   setTitle: (text: string) => void;
@@ -54,13 +53,6 @@ function normalizeDocument(document: BreakdownDocument): BreakdownDocument {
 
 export const useProjectStore = create<ProjectState>((set, get) => ({
   ...normalizeDocument(structuredClone(defaultDocument)),
-  get selectedSlice() {
-    const { project } = get();
-    return (
-      project.pieChart.slices.find((slice) => slice.id === project.pieChart.selectedSliceId) ??
-      null
-    );
-  },
   loadDocument: (document) =>
     set(normalizeDocument(document)),
   updateCanvas: (updates) =>
