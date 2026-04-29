@@ -17,6 +17,7 @@ import type {
 import type { SliceGeometry } from "../lib/geometry";
 
 const HIT_FILL = "rgba(255,255,255,0.001)";
+const SELECTED_SLICE_STROKE = "#e3342f";
 const MAX_IMAGE_SCALE = 4;
 const MIN_IMAGE_SCALE = 0.01;
 const ZOOM_FACTOR = 1.08;
@@ -549,7 +550,7 @@ export function BreakdownStage() {
                       closed
                       listening={false}
                       points={geometry.points}
-                      stroke={project.pieChart.borderColor}
+                      stroke={selected ? SELECTED_SLICE_STROKE : project.pieChart.borderColor}
                       strokeWidth={
                         selected ? project.pieChart.borderWidth + 3 : project.pieChart.borderWidth
                       }
