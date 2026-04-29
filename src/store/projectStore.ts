@@ -34,8 +34,26 @@ interface ProjectState extends BreakdownDocument {
   exportPng: () => void;
 }
 
+function normalizeDocument(document: BreakdownDocument): BreakdownDocument {
+  return {
+    assets: document.assets,
+    project: {
+      ...document.project,
+      background: {
+        ...document.project.background,
+        width: document.project.canvas.width,
+        height: document.project.canvas.height,
+      },
+      title: {
+        ...document.project.title,
+        x: document.project.canvas.width / 2,
+      },
+    },
+  };
+}
+
 export const useProjectStore = create<ProjectState>((set, get) => ({
-  ...structuredClone(defaultDocument),
+  ...normalizeDocument(structuredClone(defaultDocument)),
   get selectedSlice() {
     const { project } = get();
     return (
@@ -44,10 +62,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
     );
   },
   loadDocument: (document) =>
-    set({
-      project: document.project,
-      assets: document.assets,
-    }),
+    set(normalizeDocument(document)),
   updateCanvas: (updates) =>
     set((state) => {
       const nextCanvas = {
@@ -66,7 +81,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
           },
           title: {
             ...state.project.title,
-            x: updates.width === undefined ? state.project.title.x : nextCanvas.width / 2,
+            x: nextCanvas.width / 2,
           },
         },
       };

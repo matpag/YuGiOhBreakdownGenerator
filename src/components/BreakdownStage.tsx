@@ -207,7 +207,7 @@ export function BreakdownStage() {
               strokeWidth={project.title.strokeWidth}
               text={project.title.text}
               width={project.canvas.width}
-              x={project.title.x}
+              x={project.canvas.width / 2}
               y={project.title.y}
             />
           </Layer>
