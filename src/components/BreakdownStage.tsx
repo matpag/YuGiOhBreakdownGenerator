@@ -18,7 +18,7 @@ import type { SliceGeometry } from "../lib/geometry";
 
 const HIT_FILL = "rgba(255,255,255,0.001)";
 const MAX_IMAGE_SCALE = 4;
-const MIN_IMAGE_SCALE = 0.35;
+const MIN_IMAGE_SCALE = 0.01;
 const ZOOM_FACTOR = 1.08;
 const EDITOR_OVERLAY_NAME = "editor-overlay";
 const ZOOM_PRESETS = [25, 50, 75, 100, 150, 200];

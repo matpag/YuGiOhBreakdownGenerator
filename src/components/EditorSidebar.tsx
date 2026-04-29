@@ -61,6 +61,7 @@ export function EditorSidebar() {
   const addSliceImageLayer = useProjectStore((state) => state.addSliceImageLayer);
   const removeSliceImageLayer = useProjectStore((state) => state.removeSliceImageLayer);
   const moveSliceImageLayer = useProjectStore((state) => state.moveSliceImageLayer);
+  const setSliceImageLayerAsset = useProjectStore((state) => state.setSliceImageLayerAsset);
   const addAsset = useProjectStore((state) => state.addAsset);
   const addEmbeddedFont = useProjectStore((state) => state.addEmbeddedFont);
   const addImageLibraryItem = useProjectStore((state) => state.addImageLibraryItem);
@@ -124,6 +125,7 @@ export function EditorSidebar() {
     file: File | undefined,
     target: "background" | "logo" | "slice",
     sliceId?: string,
+    layerId?: string,
   ) {
     if (!file) {
       return;
@@ -155,7 +157,9 @@ export function EditorSidebar() {
       setLogoAsset(assetId);
     }
 
-    if (target === "slice" && sliceId) {
+    if (target === "slice" && sliceId && layerId) {
+      setSliceImageLayerAsset(sliceId, layerId, assetId);
+    } else if (target === "slice" && sliceId) {
       setSliceAsset(sliceId, assetId);
     }
   }
@@ -193,9 +197,6 @@ export function EditorSidebar() {
     selectedSlice?.imageLayers.find((layer) => layer.id === selectedSlice.selectedImageLayerId) ??
     selectedSlice?.imageLayers[0] ??
     null;
-  const selectedSliceAsset = selectedSliceImageLayer?.assetId
-    ? assets[selectedSliceImageLayer.assetId]
-    : null;
 
   return (
     <aside className="sidebar">
@@ -555,24 +556,6 @@ export function EditorSidebar() {
               }
             />
           </label>
-          <div className="asset-control">
-            <span>
-              Active image
-              <small>{selectedSliceAsset?.name ?? "No image selected"}</small>
-            </span>
-            <label className="file-button">
-              <ImagePlus size={16} />
-              Upload
-              <input
-                type="file"
-                accept="image/*"
-                onChange={(event) => {
-                  handleAssetUpload(event.target.files?.[0], "slice", selectedSlice.id);
-                  event.currentTarget.value = "";
-                }}
-              />
-            </label>
-          </div>
           <div className="slice-layer-header">
             <h3>Slice Images</h3>
             <button
@@ -603,6 +586,22 @@ export function EditorSidebar() {
                     <span>{layer.name}</span>
                     <small>{layerAsset?.name ?? "No image selected"}</small>
                   </button>
+                  <label className="slice-layer-upload" title={`Upload ${layer.name}`}>
+                    <ImagePlus size={15} />
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={(event) => {
+                        handleAssetUpload(
+                          event.target.files?.[0],
+                          "slice",
+                          selectedSlice.id,
+                          layer.id,
+                        );
+                        event.currentTarget.value = "";
+                      }}
+                    />
+                  </label>
                   <button
                     className="icon-button"
                     type="button"
@@ -640,8 +639,8 @@ export function EditorSidebar() {
                 <label>
                   Scale
                   <DraftNumberInput
-                    min={0.1}
-                    step={0.05}
+                    min={0.01}
+                    step={0.01}
                     value={selectedSliceImageLayer.imageTransform.scale}
                     onCommit={(scale) =>
                       updateSliceImageLayerTransform(selectedSlice.id, selectedSliceImageLayer.id, {

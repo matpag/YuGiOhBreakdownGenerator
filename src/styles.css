@@ -454,7 +454,7 @@ textarea {
   align-items: stretch;
   display: grid;
   gap: 6px;
-  grid-template-columns: minmax(0, 1fr) 30px 30px 30px;
+  grid-template-columns: minmax(0, 1fr) 30px 30px 30px 30px;
 }
 
 .slice-layer-select {
@@ -484,6 +484,27 @@ textarea {
   background: var(--active-bg);
   border-color: var(--active-border);
   color: var(--active-text);
+}
+
+.slice-layer-upload {
+  align-items: center;
+  background: var(--control-bg);
+  border: 1px solid var(--control-border);
+  border-radius: 6px;
+  color: var(--text);
+  cursor: pointer;
+  display: inline-flex;
+  justify-content: center;
+  min-height: 30px;
+  padding: 0;
+}
+
+.slice-layer-upload:hover {
+  background: var(--control-hover);
+}
+
+.slice-layer-upload input {
+  display: none;
 }
 
 .slice-row {
