@@ -503,6 +503,12 @@ export function BreakdownStage() {
 
           <Layer>
             <Group x={project.pieChart.x} y={project.pieChart.y}>
+              <Circle
+                radius={project.pieChart.radius}
+                listening={false}
+                stroke={project.pieChart.borderColor}
+                strokeWidth={project.pieChart.borderWidth}
+              />
               {pieSliceGeometries.map((geometry) => {
                 const selected = project.pieChart.selectedSliceId === geometry.slice.id;
 
@@ -551,12 +557,6 @@ export function BreakdownStage() {
                   </Group>
                 );
               })}
-              <Circle
-                radius={project.pieChart.radius}
-                listening={false}
-                stroke={project.pieChart.borderColor}
-                strokeWidth={project.pieChart.borderWidth}
-              />
             </Group>
             {slices.map((geometry) => {
               const position = labelPosition(
