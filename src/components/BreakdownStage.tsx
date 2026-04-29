@@ -338,7 +338,6 @@ export function BreakdownStage() {
   const previewHeight = Math.round(project.canvas.height * previewScale);
   const assetImages = useAssetImages(assets);
   const backgroundImage = project.background.assetId ? assetImages[project.background.assetId] : null;
-  const logoImage = project.logo.assetId ? assetImages[project.logo.assetId] : null;
   const slices = getSliceGeometries(project.pieChart);
   const pieSliceGeometries = [...slices].sort((leftGeometry, rightGeometry) => {
     const selectedSliceId = project.pieChart.selectedSliceId;
@@ -594,15 +593,6 @@ export function BreakdownStage() {
                 />
               );
             })}
-            {logoImage ? (
-              <Image
-                image={logoImage}
-                x={project.logo.x}
-                y={project.logo.y}
-                width={project.logo.width}
-                height={project.logo.height ?? project.logo.width}
-              />
-            ) : null}
           </Layer>
           </Stage>
         </div>

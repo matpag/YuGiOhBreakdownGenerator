@@ -10,7 +10,6 @@ export function ImageLibrarySidebar() {
   const addImageLibraryItem = useProjectStore((state) => state.addImageLibraryItem);
   const removeImageLibraryItem = useProjectStore((state) => state.removeImageLibraryItem);
   const setBackgroundAsset = useProjectStore((state) => state.setBackgroundAsset);
-  const setLogoAsset = useProjectStore((state) => state.setLogoAsset);
   const setSliceAsset = useProjectStore((state) => state.setSliceAsset);
   const [collapsed, setCollapsed] = useState(false);
   const [imageUploadError, setImageUploadError] = useState<string | null>(null);
@@ -117,13 +116,6 @@ export function ImageLibrarySidebar() {
                         onClick={() => setBackgroundAsset(item.assetId)}
                       >
                         BG
-                      </button>
-                      <button
-                        type="button"
-                        title="Use as logo"
-                        onClick={() => setLogoAsset(item.assetId)}
-                      >
-                        Logo
                       </button>
                       <button
                         type="button"

@@ -91,7 +91,7 @@ export const chartSliceSchema = z
     value: nonNegativeNumberSchema,
     assetId: nullableAssetIdSchema,
     imageTransform: sliceImageTransformSchema,
-    imageLayers: z.array(sliceImageLayerSchema).max(2).default([]),
+    imageLayers: z.array(sliceImageLayerSchema).default([]),
     selectedImageLayerId: z.string().min(1).nullable().default(null),
   })
   .strict()

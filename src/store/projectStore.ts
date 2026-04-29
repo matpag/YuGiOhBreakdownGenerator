@@ -45,7 +45,6 @@ interface ProjectState extends BreakdownDocument {
   addImageLibraryItem: (item: ImageLibraryItem) => void;
   removeImageLibraryItem: (itemId: string) => void;
   setBackgroundAsset: (assetId: AssetId) => void;
-  setLogoAsset: (assetId: AssetId) => void;
   setSliceAsset: (sliceId: string, assetId: AssetId) => void;
   setSliceImageLayerAsset: (sliceId: string, layerId: string, assetId: AssetId) => void;
   exportPng: () => void;
@@ -78,7 +77,7 @@ function normalizeDocument(document: BreakdownDocument): BreakdownDocument {
 function normalizeSlice(slice: ChartSlice): ChartSlice {
   const imageLayers =
     slice.imageLayers.length > 0
-      ? slice.imageLayers.slice(0, 2)
+      ? slice.imageLayers
       : [
           {
             id: `${slice.id}-image-1`,
@@ -241,7 +240,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
         pieChart: {
           ...state.project.pieChart,
           slices: state.project.pieChart.slices.map((slice) => {
-            if (slice.id !== sliceId || slice.imageLayers.length >= 2) {
+            if (slice.id !== sliceId) {
               return slice;
             }
 
@@ -441,16 +440,6 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
         ...state.project,
         background: {
           ...state.project.background,
-          assetId,
-        },
-      },
-    })),
-  setLogoAsset: (assetId) =>
-    set((state) => ({
-      project: {
-        ...state.project,
-        logo: {
-          ...state.project.logo,
           assetId,
         },
       },

@@ -66,7 +66,6 @@ export function EditorSidebar() {
   const addEmbeddedFont = useProjectStore((state) => state.addEmbeddedFont);
   const addImageLibraryItem = useProjectStore((state) => state.addImageLibraryItem);
   const setBackgroundAsset = useProjectStore((state) => state.setBackgroundAsset);
-  const setLogoAsset = useProjectStore((state) => state.setLogoAsset);
   const setSliceAsset = useProjectStore((state) => state.setSliceAsset);
   const setSelectedSlice = useProjectStore((state) => state.setSelectedSlice);
   const [fontOptions, setFontOptions] = useState(() =>
@@ -123,7 +122,7 @@ export function EditorSidebar() {
 
   async function handleAssetUpload(
     file: File | undefined,
-    target: "background" | "logo" | "slice",
+    target: "background" | "slice",
     sliceId?: string,
     layerId?: string,
   ) {
@@ -151,10 +150,6 @@ export function EditorSidebar() {
 
     if (target === "background") {
       setBackgroundAsset(assetId);
-    }
-
-    if (target === "logo") {
-      setLogoAsset(assetId);
     }
 
     if (target === "slice" && sliceId && layerId) {
@@ -190,7 +185,6 @@ export function EditorSidebar() {
   }
 
   const backgroundAsset = project.background.assetId ? assets[project.background.assetId] : null;
-  const logoAsset = project.logo.assetId ? assets[project.logo.assetId] : null;
   const selectedSlice =
     project.pieChart.slices.find((slice) => slice.id === project.pieChart.selectedSliceId) ?? null;
   const selectedSliceImageLayer =
@@ -322,24 +316,6 @@ export function EditorSidebar() {
               accept="image/*"
               onChange={(event) => {
                 handleAssetUpload(event.target.files?.[0], "background");
-                event.currentTarget.value = "";
-              }}
-            />
-          </label>
-        </div>
-        <div className="asset-control">
-          <span>
-            Logo
-            <small>{logoAsset?.name ?? "No image selected"}</small>
-          </span>
-          <label className="file-button">
-            <ImagePlus size={16} />
-            Upload
-            <input
-              type="file"
-              accept="image/*"
-              onChange={(event) => {
-                handleAssetUpload(event.target.files?.[0], "logo");
                 event.currentTarget.value = "";
               }}
             />
@@ -561,7 +537,6 @@ export function EditorSidebar() {
             <button
               type="button"
               onClick={() => addSliceImageLayer(selectedSlice.id)}
-              disabled={selectedSlice.imageLayers.length >= 2}
             >
               <Plus size={16} />
               Add image
