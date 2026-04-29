@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { ImagePlus, Minus, Plus } from "lucide-react";
 import { fileToAsset } from "../lib/assets";
 import { useProjectStore } from "../store/projectStore";
@@ -21,6 +22,16 @@ export function EditorSidebar() {
   const setLogoAsset = useProjectStore((state) => state.setLogoAsset);
   const setSliceAsset = useProjectStore((state) => state.setSliceAsset);
   const setSelectedSlice = useProjectStore((state) => state.setSelectedSlice);
+  const [canvasWidthDraft, setCanvasWidthDraft] = useState(String(project.canvas.width));
+  const [canvasHeightDraft, setCanvasHeightDraft] = useState(String(project.canvas.height));
+
+  useEffect(() => {
+    setCanvasWidthDraft(String(project.canvas.width));
+  }, [project.canvas.width]);
+
+  useEffect(() => {
+    setCanvasHeightDraft(String(project.canvas.height));
+  }, [project.canvas.height]);
 
   async function handleAssetUpload(file: File | undefined, target: "background" | "logo" | "slice") {
     if (!file) {
@@ -56,6 +67,16 @@ export function EditorSidebar() {
     return min === undefined ? nextValue : Math.max(min, nextValue);
   }
 
+  function readCanvasDimension(value: string) {
+    const nextValue = Number(value);
+
+    if (!Number.isFinite(nextValue) || nextValue <= 0) {
+      return null;
+    }
+
+    return Math.round(nextValue);
+  }
+
   const backgroundAsset = project.background.assetId ? assets[project.background.assetId] : null;
   const logoAsset = project.logo.assetId ? assets[project.logo.assetId] : null;
   const selectedSliceAsset = selectedSlice?.assetId ? assets[selectedSlice.assetId] : null;
@@ -68,29 +89,49 @@ export function EditorSidebar() {
           <label>
             Width
             <input
-              min="256"
+              inputMode="numeric"
               step="1"
-              type="number"
-              value={project.canvas.width}
-              onChange={(event) =>
-                updateCanvas({
-                  width: Math.round(readNumber(event.target.value, project.canvas.width, 256)),
-                })
-              }
+              type="text"
+              value={canvasWidthDraft}
+              onBlur={() => {
+                if (canvasWidthDraft.trim() === "") {
+                  setCanvasWidthDraft(String(project.canvas.width));
+                }
+              }}
+              onChange={(event) => {
+                const nextDraft = event.target.value;
+                const nextWidth = readCanvasDimension(nextDraft);
+
+                setCanvasWidthDraft(nextDraft);
+
+                if (nextWidth !== null) {
+                  updateCanvas({ width: nextWidth });
+                }
+              }}
             />
           </label>
           <label>
             Height
             <input
-              min="256"
+              inputMode="numeric"
               step="1"
-              type="number"
-              value={project.canvas.height}
-              onChange={(event) =>
-                updateCanvas({
-                  height: Math.round(readNumber(event.target.value, project.canvas.height, 256)),
-                })
-              }
+              type="text"
+              value={canvasHeightDraft}
+              onBlur={() => {
+                if (canvasHeightDraft.trim() === "") {
+                  setCanvasHeightDraft(String(project.canvas.height));
+                }
+              }}
+              onChange={(event) => {
+                const nextDraft = event.target.value;
+                const nextHeight = readCanvasDimension(nextDraft);
+
+                setCanvasHeightDraft(nextDraft);
+
+                if (nextHeight !== null) {
+                  updateCanvas({ height: nextHeight });
+                }
+              }}
             />
           </label>
         </div>
