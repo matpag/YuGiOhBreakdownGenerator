@@ -3,7 +3,32 @@ import { ImagePlus, Minus, Plus } from "lucide-react";
 import { fileToAsset } from "../lib/assets";
 import { useProjectStore } from "../store/projectStore";
 
-const FONT_OPTIONS = ["Arial Black", "Impact", "Inter", "Georgia", "Trebuchet MS"];
+const FALLBACK_FONT_OPTIONS = [
+  "Arial Black",
+  "Arial",
+  "Calibri",
+  "Cambria",
+  "Comic Sans MS",
+  "Courier New",
+  "Georgia",
+  "Impact",
+  "Inter",
+  "Segoe UI",
+  "Tahoma",
+  "Times New Roman",
+  "Trebuchet MS",
+  "Verdana",
+];
+
+interface LocalFontData {
+  family: string;
+}
+
+declare global {
+  interface Window {
+    queryLocalFonts?: () => Promise<LocalFontData[]>;
+  }
+}
 
 export function EditorSidebar() {
   const project = useProjectStore((state) => state.project);
@@ -24,6 +49,14 @@ export function EditorSidebar() {
   const setSelectedSlice = useProjectStore((state) => state.setSelectedSlice);
   const [canvasWidthDraft, setCanvasWidthDraft] = useState(String(project.canvas.width));
   const [canvasHeightDraft, setCanvasHeightDraft] = useState(String(project.canvas.height));
+  const [fontOptions, setFontOptions] = useState(() =>
+    mergeFontOptions([
+      ...FALLBACK_FONT_OPTIONS,
+      project.title.fontFamily,
+      project.pieChart.labelStyle.fontFamily,
+    ]),
+  );
+  const [fontAccessRequested, setFontAccessRequested] = useState(false);
 
   useEffect(() => {
     setCanvasWidthDraft(String(project.canvas.width));
@@ -32,6 +65,44 @@ export function EditorSidebar() {
   useEffect(() => {
     setCanvasHeightDraft(String(project.canvas.height));
   }, [project.canvas.height]);
+
+  useEffect(() => {
+    setFontOptions((currentOptions) =>
+      mergeFontOptions([
+        ...currentOptions,
+        project.title.fontFamily,
+        project.pieChart.labelStyle.fontFamily,
+      ]),
+    );
+  }, [project.title.fontFamily, project.pieChart.labelStyle.fontFamily]);
+
+  async function loadSystemFonts() {
+    if (fontAccessRequested || !window.queryLocalFonts) {
+      return;
+    }
+
+    setFontAccessRequested(true);
+
+    try {
+      const localFonts = await window.queryLocalFonts();
+      setFontOptions((currentOptions) =>
+        mergeFontOptions([
+          ...currentOptions,
+          ...localFonts.map((font) => font.family),
+          project.title.fontFamily,
+          project.pieChart.labelStyle.fontFamily,
+        ]),
+      );
+    } catch {
+      setFontOptions((currentOptions) =>
+        mergeFontOptions([
+          ...currentOptions,
+          project.title.fontFamily,
+          project.pieChart.labelStyle.fontFamily,
+        ]),
+      );
+    }
+  }
 
   async function handleAssetUpload(file: File | undefined, target: "background" | "logo" | "slice") {
     if (!file) {
@@ -148,9 +219,11 @@ export function EditorSidebar() {
             Font
             <select
               value={project.title.fontFamily}
+              onFocus={loadSystemFonts}
+              onPointerDown={loadSystemFonts}
               onChange={(event) => updateTitle({ fontFamily: event.target.value })}
             >
-              {FONT_OPTIONS.map((font) => (
+              {fontOptions.map((font) => (
                 <option key={font} value={font}>
                   {font}
                 </option>
@@ -173,7 +246,7 @@ export function EditorSidebar() {
         </div>
         <div className="field-row">
           <label>
-            Fill
+            Text color
             <input
               className="color-input"
               type="color"
@@ -182,7 +255,7 @@ export function EditorSidebar() {
             />
           </label>
           <label>
-            Stroke
+            Stroke color
             <input
               className="color-input"
               type="color"
@@ -302,6 +375,8 @@ export function EditorSidebar() {
             Label font
             <select
               value={project.pieChart.labelStyle.fontFamily}
+              onFocus={loadSystemFonts}
+              onPointerDown={loadSystemFonts}
               onChange={(event) =>
                 updatePieChart({
                   labelStyle: {
@@ -311,7 +386,7 @@ export function EditorSidebar() {
                 })
               }
             >
-              {FONT_OPTIONS.map((font) => (
+              {fontOptions.map((font) => (
                 <option key={font} value={font}>
                   {font}
                 </option>
@@ -329,6 +404,40 @@ export function EditorSidebar() {
                   labelStyle: {
                     ...project.pieChart.labelStyle,
                     fontSize: readNumber(event.target.value, project.pieChart.labelStyle.fontSize, 1),
+                  },
+                })
+              }
+            />
+          </label>
+        </div>
+        <div className="field-row">
+          <label>
+            Label text color
+            <input
+              className="color-input"
+              type="color"
+              value={project.pieChart.labelStyle.fill}
+              onChange={(event) =>
+                updatePieChart({
+                  labelStyle: {
+                    ...project.pieChart.labelStyle,
+                    fill: event.target.value,
+                  },
+                })
+              }
+            />
+          </label>
+          <label>
+            Label stroke color
+            <input
+              className="color-input"
+              type="color"
+              value={project.pieChart.labelStyle.stroke}
+              onChange={(event) =>
+                updatePieChart({
+                  labelStyle: {
+                    ...project.pieChart.labelStyle,
+                    stroke: event.target.value,
                   },
                 })
               }
@@ -492,5 +601,11 @@ export function EditorSidebar() {
         </section>
       ) : null}
     </aside>
+  );
+}
+
+function mergeFontOptions(fonts: string[]) {
+  return Array.from(new Set(fonts.map((font) => font.trim()).filter(Boolean))).sort((a, b) =>
+    a.localeCompare(b),
   );
 }
