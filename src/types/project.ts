@@ -16,6 +16,14 @@ export interface TextStyle {
   strokeWidth: number;
 }
 
+export interface LabelTextStyle {
+  fontFamily: string;
+  fontSize: number;
+  fill: string;
+  stroke: string;
+  strokeWidth: number;
+}
+
 export interface ImageLayer {
   assetId: AssetId | null;
   x: number;
@@ -47,6 +55,7 @@ export interface PieChartSettings {
   startAngle: number;
   borderColor: string;
   borderWidth: number;
+  labelStyle: LabelTextStyle;
   selectedSliceId: string | null;
   slices: ChartSlice[];
 }
@@ -71,4 +80,3 @@ export interface BreakdownDocument {
   project: BreakdownProject;
   assets: Record<AssetId, ProjectAsset>;
 }
-

@@ -297,6 +297,64 @@ export function EditorSidebar() {
             }
           />
         </label>
+        <div className="field-row">
+          <label>
+            Label font
+            <select
+              value={project.pieChart.labelStyle.fontFamily}
+              onChange={(event) =>
+                updatePieChart({
+                  labelStyle: {
+                    ...project.pieChart.labelStyle,
+                    fontFamily: event.target.value,
+                  },
+                })
+              }
+            >
+              {FONT_OPTIONS.map((font) => (
+                <option key={font} value={font}>
+                  {font}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            Label size
+            <input
+              min="1"
+              type="number"
+              value={project.pieChart.labelStyle.fontSize}
+              onChange={(event) =>
+                updatePieChart({
+                  labelStyle: {
+                    ...project.pieChart.labelStyle,
+                    fontSize: readNumber(event.target.value, project.pieChart.labelStyle.fontSize, 1),
+                  },
+                })
+              }
+            />
+          </label>
+        </div>
+        <label>
+          Label stroke width
+          <input
+            min="0"
+            type="number"
+            value={project.pieChart.labelStyle.strokeWidth}
+            onChange={(event) =>
+              updatePieChart({
+                labelStyle: {
+                  ...project.pieChart.labelStyle,
+                  strokeWidth: readNumber(
+                    event.target.value,
+                    project.pieChart.labelStyle.strokeWidth,
+                    0,
+                  ),
+                },
+              })
+            }
+          />
+        </label>
       </section>
 
       <section className="panel">

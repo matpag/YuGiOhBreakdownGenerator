@@ -39,6 +39,13 @@ export const defaultDocument: BreakdownDocument = {
       startAngle: -90,
       borderColor: "#000000",
       borderWidth: 8,
+      labelStyle: {
+        fontFamily: "Arial Black",
+        fontSize: 40,
+        fill: "#ffffff",
+        stroke: "#000000",
+        strokeWidth: 8,
+      },
       selectedSliceId: "slice-1",
       slices: [
         {
@@ -81,4 +88,3 @@ export const defaultDocument: BreakdownDocument = {
   },
   assets: {},
 };
-

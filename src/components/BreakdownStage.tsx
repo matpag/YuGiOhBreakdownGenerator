@@ -283,19 +283,20 @@ export function BreakdownStage() {
             </Group>
             {slices.map((geometry) => {
               const position = labelPosition(project.pieChart, geometry.midAngle);
+              const labelStyle = project.pieChart.labelStyle;
 
               return (
                 <Text
                   key={geometry.slice.id}
                   align="center"
-                  fill="#ffffff"
-                  fontFamily="Arial Black"
-                  fontSize={40}
+                  fill={labelStyle.fill}
+                  fontFamily={labelStyle.fontFamily}
+                  fontSize={labelStyle.fontSize}
                   fontStyle="bold"
                   offsetX={120}
                   offsetY={32}
-                  stroke="#000000"
-                  strokeWidth={8}
+                  stroke={labelStyle.stroke}
+                  strokeWidth={labelStyle.strokeWidth}
                   text={`${geometry.slice.label}\n(${geometry.slice.value})`}
                   width={240}
                   x={position.x}

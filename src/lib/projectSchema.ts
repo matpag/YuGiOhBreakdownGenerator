@@ -27,6 +27,16 @@ export const textStyleSchema = z
   })
   .strict();
 
+export const labelTextStyleSchema = z
+  .object({
+    fontFamily: z.string().min(1),
+    fontSize: positiveNumberSchema,
+    fill: z.string().min(1),
+    stroke: z.string().min(1),
+    strokeWidth: nonNegativeNumberSchema,
+  })
+  .strict();
+
 export const imageLayerSchema = z
   .object({
     assetId: nullableAssetIdSchema,
@@ -65,6 +75,13 @@ export const pieChartSettingsSchema = z
     startAngle: finiteNumberSchema,
     borderColor: z.string().min(1),
     borderWidth: nonNegativeNumberSchema,
+    labelStyle: labelTextStyleSchema.default({
+      fontFamily: "Arial Black",
+      fontSize: 40,
+      fill: "#ffffff",
+      stroke: "#000000",
+      strokeWidth: 8,
+    }),
     selectedSliceId: z.string().min(1).nullable(),
     slices: z.array(chartSliceSchema),
   })
@@ -146,7 +163,7 @@ export const breakdownDocumentSchema = z
         });
       }
     }
-  }) satisfies z.ZodType<BreakdownDocument>;
+  });
 
 export function parseBreakdownDocument(value: unknown): BreakdownDocument {
   return breakdownDocumentSchema.parse(value);
