@@ -12,15 +12,15 @@ Local-only desktop web app for generating Yu-Gi-Oh retroformat deck breakdown gr
 - JSZip
 - Zod
 
-## GitFlow
+## Branch Workflow
 
-This repository uses a GitFlow-style branch model:
+This repository uses a lightweight branch model:
 
-- `main`: stable release branch
-- `develop`: integration branch
-- `feature/YUG-xx-short-name`: feature work branches
-- `release/x.y.z`: release stabilization
-- `hotfix/x.y.z`: urgent production fixes
+- `main`: stable current branch
+- `feature/...` or `codex/...`: focused work branches created from `main`
+- Open pull requests from feature branches into `main`
+- Run `npm run build` and the relevant manual QA before merging
+- Delete merged feature branches when they are no longer needed
 
 ## Local Setup
 
