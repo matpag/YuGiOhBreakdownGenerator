@@ -338,6 +338,19 @@ export function BreakdownStage() {
   const backgroundImage = project.background.assetId ? assetImages[project.background.assetId] : null;
   const logoImage = project.logo.assetId ? assetImages[project.logo.assetId] : null;
   const slices = getSliceGeometries(project.pieChart);
+  const pieSliceGeometries = [...slices].sort((leftGeometry, rightGeometry) => {
+    const selectedSliceId = project.pieChart.selectedSliceId;
+
+    if (leftGeometry.slice.id === selectedSliceId) {
+      return 1;
+    }
+
+    if (rightGeometry.slice.id === selectedSliceId) {
+      return -1;
+    }
+
+    return 0;
+  });
 
   useEffect(() => {
     const viewport = viewportRef.current;
@@ -489,7 +502,7 @@ export function BreakdownStage() {
 
           <Layer>
             <Group x={project.pieChart.x} y={project.pieChart.y}>
-              {slices.map((geometry) => {
+              {pieSliceGeometries.map((geometry) => {
                 const selected = project.pieChart.selectedSliceId === geometry.slice.id;
 
                 return (
