@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { defaultDocument } from "../data/defaultProject";
+import { safeLabelDistance } from "../lib/geometry";
 import type {
   AssetId,
   BreakdownDocument,
@@ -324,6 +325,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
       const index = state.project.pieChart.slices.length + 1;
       const id = `slice-${crypto.randomUUID()}`;
       const layerId = `slice-image-${crypto.randomUUID()}`;
+      const minimumLabelDistance = safeLabelDistance(state.project.pieChart);
 
       return {
         project: {
@@ -332,11 +334,17 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
             ...state.project.pieChart,
             selectedSliceId: id,
             slices: [
-              ...state.project.pieChart.slices,
+              ...state.project.pieChart.slices.map((slice) => ({
+                ...slice,
+                labelDistance: Math.max(
+                  slice.labelDistance ?? minimumLabelDistance,
+                  minimumLabelDistance,
+                ),
+              })),
               {
                 id,
                 label: `Deck ${index}`,
-                labelDistance: 96,
+                labelDistance: minimumLabelDistance,
                 value: 1,
                 assetId: null,
                 imageTransform: { ...DEFAULT_SLICE_IMAGE_TRANSFORM },

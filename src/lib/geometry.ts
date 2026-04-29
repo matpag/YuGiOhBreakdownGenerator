@@ -17,6 +17,14 @@ interface PathContext {
 
 const toRadians = (degrees: number) => (degrees * Math.PI) / 180;
 export const DEFAULT_LABEL_DISTANCE = 96;
+const MIN_LABEL_STROKE_GAP = 16;
+
+export function safeLabelDistance(chart: PieChartSettings) {
+  const labelInset =
+    chart.labelStyle.fontSize + chart.labelStyle.strokeWidth + chart.borderWidth / 2;
+
+  return Math.max(DEFAULT_LABEL_DISTANCE, Math.ceil(labelInset + MIN_LABEL_STROKE_GAP));
+}
 
 export function getSliceGeometries(chart: PieChartSettings): SliceGeometry[] {
   const total = chart.slices.reduce((sum, slice) => sum + Math.max(slice.value, 0), 0);
