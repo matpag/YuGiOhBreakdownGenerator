@@ -11,12 +11,13 @@ import { useProjectStore } from "../store/projectStore";
 import type { ChartSlice, ProjectAsset, SliceImageTransform } from "../types/project";
 import type { SliceGeometry } from "../lib/geometry";
 
-const PREVIEW_MAX_SIZE = 900;
 const HIT_FILL = "rgba(255,255,255,0.001)";
 const MAX_IMAGE_SCALE = 4;
 const MIN_IMAGE_SCALE = 0.35;
 const ZOOM_FACTOR = 1.08;
 const EDITOR_OVERLAY_NAME = "editor-overlay";
+const ZOOM_PRESETS = [25, 50, 75, 100, 150, 200];
+const CANVAS_PADDING = 56;
 
 function clamp(value: number, min: number, max: number) {
   return Math.min(Math.max(value, min), max);
@@ -243,20 +244,43 @@ function getSliceImageSize(image: HTMLImageElement | null, radius: number) {
 
 export function BreakdownStage() {
   const stageRef = useRef<Konva.Stage>(null);
+  const viewportRef = useRef<HTMLDivElement>(null);
+  const [viewportSize, setViewportSize] = useState({ width: 900, height: 900 });
+  const [zoomMode, setZoomMode] = useState<"fit" | "fixed">("fit");
+  const [zoomPercent, setZoomPercent] = useState(100);
   const project = useProjectStore((state) => state.project);
   const assets = useProjectStore((state) => state.assets);
   const setSelectedSlice = useProjectStore((state) => state.setSelectedSlice);
   const updateSlice = useProjectStore((state) => state.updateSlice);
-  const previewScale = Math.min(
-    PREVIEW_MAX_SIZE / project.canvas.width,
-    PREVIEW_MAX_SIZE / project.canvas.height,
+  const fitScale = Math.min(
+    Math.max((viewportSize.width - CANVAS_PADDING) / project.canvas.width, 0.05),
+    Math.max((viewportSize.height - CANVAS_PADDING) / project.canvas.height, 0.05),
   );
+  const previewScale = zoomMode === "fit" ? fitScale : zoomPercent / 100;
   const previewWidth = Math.round(project.canvas.width * previewScale);
   const previewHeight = Math.round(project.canvas.height * previewScale);
   const assetImages = useAssetImages(assets);
   const backgroundImage = project.background.assetId ? assetImages[project.background.assetId] : null;
   const logoImage = project.logo.assetId ? assetImages[project.logo.assetId] : null;
   const slices = getSliceGeometries(project.pieChart);
+
+  useEffect(() => {
+    const viewport = viewportRef.current;
+
+    if (!viewport) {
+      return;
+    }
+
+    const observer = new ResizeObserver(([entry]) => {
+      setViewportSize({
+        width: entry.contentRect.width,
+        height: entry.contentRect.height,
+      });
+    });
+
+    observer.observe(viewport);
+    return () => observer.disconnect();
+  }, []);
 
   const updateSliceImageTransform = useCallback(
     (sliceId: string, imageTransform: SliceImageTransform) => {
@@ -319,15 +343,57 @@ export function BreakdownStage() {
   }, [previewScale]);
 
   return (
-    <div className="canvas-wrap">
-      <div className="stage-shell">
-        <Stage
-          ref={stageRef}
-          width={previewWidth}
-          height={previewHeight}
-          scaleX={previewScale}
-          scaleY={previewScale}
-        >
+    <section className="preview-pane">
+      <div className="preview-toolbar">
+        <div className="zoom-controls" aria-label="Preview zoom">
+          <button
+            className={zoomMode === "fit" ? "zoom-button-active" : ""}
+            type="button"
+            onClick={() => setZoomMode("fit")}
+          >
+            Fill
+          </button>
+          {ZOOM_PRESETS.map((preset) => (
+            <button
+              className={zoomMode === "fixed" && zoomPercent === preset ? "zoom-button-active" : ""}
+              key={preset}
+              type="button"
+              onClick={() => {
+                setZoomMode("fixed");
+                setZoomPercent(preset);
+              }}
+            >
+              {preset}%
+            </button>
+          ))}
+        </div>
+        <label className="zoom-custom">
+          Zoom
+          <input
+            min="5"
+            step="5"
+            type="number"
+            value={zoomMode === "fit" ? Math.round(fitScale * 100) : zoomPercent}
+            onChange={(event) => {
+              const nextPercent = Number(event.target.value);
+
+              if (Number.isFinite(nextPercent) && nextPercent > 0) {
+                setZoomMode("fixed");
+                setZoomPercent(nextPercent);
+              }
+            }}
+          />
+        </label>
+      </div>
+      <div ref={viewportRef} className="canvas-wrap">
+        <div className="stage-shell">
+          <Stage
+            ref={stageRef}
+            width={previewWidth}
+            height={previewHeight}
+            scaleX={previewScale}
+            scaleY={previewScale}
+          >
           <Layer>
             <Rect width={project.canvas.width} height={project.canvas.height} fill="#202536" />
             {backgroundImage ? (
@@ -443,8 +509,9 @@ export function BreakdownStage() {
               />
             ) : null}
           </Layer>
-        </Stage>
+          </Stage>
+        </div>
       </div>
-    </div>
+    </section>
   );
 }

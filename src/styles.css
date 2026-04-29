@@ -124,6 +124,55 @@ textarea {
   min-height: 0;
 }
 
+.preview-pane {
+  display: grid;
+  grid-template-rows: 54px 1fr;
+  min-height: 0;
+}
+
+.preview-toolbar {
+  align-items: center;
+  background: #ffffff;
+  border-bottom: 1px solid #dce1ea;
+  display: flex;
+  gap: 14px;
+  justify-content: space-between;
+  padding: 0 18px;
+}
+
+.zoom-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.zoom-controls button {
+  min-height: 32px;
+  padding: 0 10px;
+}
+
+.zoom-button-active {
+  background: #e9f2ff;
+  border-color: #7faeea;
+  color: #174d91;
+}
+
+.zoom-button-active:hover {
+  background: #dcecff;
+}
+
+.zoom-custom {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+  white-space: nowrap;
+}
+
+.zoom-custom input {
+  min-height: 32px;
+  width: 84px;
+}
+
 .sidebar {
   background: #ffffff;
   border-right: 1px solid #dce1ea;
@@ -205,17 +254,19 @@ textarea {
 }
 
 .canvas-wrap {
-  align-items: center;
-  display: flex;
-  justify-content: center;
+  display: grid;
   min-height: 0;
   overflow: auto;
   padding: 28px;
+  place-items: start center;
 }
 
 .stage-shell {
   background: #dce1ea;
   box-shadow: 0 18px 45px rgba(25, 32, 47, 0.16);
+  height: max-content;
+  line-height: 0;
+  width: max-content;
 }
 
 .slice-list {
