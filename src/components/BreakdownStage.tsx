@@ -1,15 +1,17 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Konva from "konva";
-import { Circle, Group, Image, Layer, Line, Rect, Stage, Text } from "react-konva";
+import { Circle, Group, Image, Layer, Line, Rect, Stage, Text, Transformer } from "react-konva";
 import { getSliceGeometries, labelPosition, traceWedgePath } from "../lib/geometry";
 import { useProjectStore } from "../store/projectStore";
 import type { ChartSlice, ProjectAsset, SliceImageTransform } from "../types/project";
+import type { SliceGeometry } from "../lib/geometry";
 
 const PREVIEW_MAX_SIZE = 900;
 const HIT_FILL = "rgba(255,255,255,0.001)";
 const MAX_IMAGE_SCALE = 4;
 const MIN_IMAGE_SCALE = 0.35;
 const ZOOM_FACTOR = 1.08;
+const EDITOR_OVERLAY_NAME = "editor-overlay";
 
 function clamp(value: number, min: number, max: number) {
   return Math.min(Math.max(value, min), max);
@@ -70,9 +72,172 @@ function useAssetImages(assets: Record<string, ProjectAsset>) {
   return images;
 }
 
+interface SliceImageEditorProps {
+  geometry: SliceGeometry;
+  image: HTMLImageElement | null;
+  isSelected: boolean;
+  radius: number;
+  setSelectedSlice: (sliceId: string) => void;
+  updateSlice: (sliceId: string, updates: Partial<ChartSlice>) => void;
+}
+
+function SliceImageEditor({
+  geometry,
+  image,
+  isSelected,
+  radius,
+  setSelectedSlice,
+  updateSlice,
+}: SliceImageEditorProps) {
+  const imageRef = useRef<Konva.Image>(null);
+  const transformerRef = useRef<Konva.Transformer>(null);
+  const transform = geometry.slice.imageTransform;
+  const imageSize = getSliceImageSize(image, radius);
+
+  useEffect(() => {
+    const transformer = transformerRef.current;
+    const imageNode = imageRef.current;
+
+    if (!transformer) {
+      return;
+    }
+
+    if (isSelected && imageNode) {
+      transformer.nodes([imageNode]);
+      transformer.getLayer()?.batchDraw();
+      return;
+    }
+
+    transformer.nodes([]);
+    transformer.getLayer()?.batchDraw();
+  }, [image, isSelected, imageSize.height, imageSize.width]);
+
+  if (!image) {
+    return null;
+  }
+
+  function commitImageTransform(node: Konva.Image) {
+    const nextScale = clamp(
+      Math.max(Math.abs(node.scaleX()), Math.abs(node.scaleY())),
+      MIN_IMAGE_SCALE,
+      MAX_IMAGE_SCALE,
+    );
+
+    node.scale({ x: nextScale, y: nextScale });
+
+    updateSlice(geometry.slice.id, {
+      imageTransform: {
+        ...transform,
+        x: node.x(),
+        y: node.y(),
+        scale: nextScale,
+        rotation: node.rotation(),
+      },
+    });
+  }
+
+  function handleImageWheel(event: Konva.KonvaEventObject<WheelEvent>) {
+    if (!isSelected) {
+      return;
+    }
+
+    event.evt.preventDefault();
+    event.cancelBubble = true;
+
+    const nextScale =
+      event.evt.deltaY < 0 ? transform.scale * ZOOM_FACTOR : transform.scale / ZOOM_FACTOR;
+
+    updateSlice(geometry.slice.id, {
+      imageTransform: {
+        ...transform,
+        scale: clamp(nextScale, MIN_IMAGE_SCALE, MAX_IMAGE_SCALE),
+      },
+    });
+  }
+
+  return (
+    <>
+      <Group
+        clipFunc={(context) => {
+          traceWedgePath(context, geometry.points);
+        }}
+      >
+        <Image
+          ref={imageRef}
+          draggable={isSelected}
+          image={image}
+          height={imageSize.height}
+          offsetX={imageSize.width / 2}
+          offsetY={imageSize.height / 2}
+          onClick={() => setSelectedSlice(geometry.slice.id)}
+          onDragEnd={(event) => commitImageTransform(event.target as Konva.Image)}
+          onDragMove={(event) => {
+            updateSlice(geometry.slice.id, {
+              imageTransform: {
+                ...transform,
+                x: event.target.x(),
+                y: event.target.y(),
+              },
+            });
+          }}
+          onTap={() => setSelectedSlice(geometry.slice.id)}
+          onTransformEnd={(event) => commitImageTransform(event.target as Konva.Image)}
+          onWheel={handleImageWheel}
+          rotation={transform.rotation}
+          scaleX={transform.scale}
+          scaleY={transform.scale}
+          width={imageSize.width}
+          x={transform.x}
+          y={transform.y}
+        />
+      </Group>
+      {isSelected ? (
+        <Transformer
+          ref={transformerRef}
+          anchorCornerRadius={3}
+          anchorFill="#ffffff"
+          anchorSize={14}
+          borderDash={[8, 6]}
+          borderStroke="#2f80ed"
+          borderStrokeWidth={2}
+          enabledAnchors={["top-left", "top-right", "bottom-left", "bottom-right"]}
+          flipEnabled={false}
+          keepRatio
+          name={EDITOR_OVERLAY_NAME}
+          rotateEnabled={false}
+        />
+      ) : null}
+    </>
+  );
+}
+
+function getSliceImageSize(image: HTMLImageElement | null, radius: number) {
+  const diameter = radius * 2;
+
+  if (!image?.naturalWidth || !image.naturalHeight) {
+    return {
+      width: diameter,
+      height: diameter,
+    };
+  }
+
+  const aspectRatio = image.naturalWidth / image.naturalHeight;
+
+  if (aspectRatio >= 1) {
+    return {
+      width: diameter * aspectRatio,
+      height: diameter,
+    };
+  }
+
+  return {
+    width: diameter,
+    height: diameter / aspectRatio,
+  };
+}
+
 export function BreakdownStage() {
   const stageRef = useRef<Konva.Stage>(null);
-  const sliceTransformsRef = useRef<Record<string, SliceImageTransform>>({});
   const project = useProjectStore((state) => state.project);
   const assets = useProjectStore((state) => state.assets);
   const setSelectedSlice = useProjectStore((state) => state.setSelectedSlice);
@@ -88,45 +253,11 @@ export function BreakdownStage() {
   const logoImage = project.logo.assetId ? assetImages[project.logo.assetId] : null;
   const slices = getSliceGeometries(project.pieChart);
 
-  useEffect(() => {
-    sliceTransformsRef.current = Object.fromEntries(
-      project.pieChart.slices.map((slice) => [slice.id, slice.imageTransform]),
-    ) as Record<string, SliceImageTransform>;
-  }, [project.pieChart.slices]);
-
   const updateSliceImageTransform = useCallback(
     (sliceId: string, imageTransform: SliceImageTransform) => {
-      sliceTransformsRef.current = {
-        ...sliceTransformsRef.current,
-        [sliceId]: imageTransform,
-      };
       updateSlice(sliceId, { imageTransform });
     },
     [updateSlice],
-  );
-
-  const handleSliceDragMove = useCallback(
-    (event: Konva.KonvaEventObject<Event>, slice: ChartSlice, canTransformImage: boolean) => {
-      if (!canTransformImage) {
-        return;
-      }
-
-      const dx = event.target.x();
-      const dy = event.target.y();
-      event.target.position({ x: 0, y: 0 });
-
-      if (dx === 0 && dy === 0) {
-        return;
-      }
-
-      const currentTransform = sliceTransformsRef.current[slice.id] ?? slice.imageTransform;
-      updateSliceImageTransform(slice.id, {
-        ...currentTransform,
-        x: currentTransform.x + dx,
-        y: currentTransform.y + dy,
-      });
-    },
-    [updateSliceImageTransform],
   );
 
   const handleSliceWheel = useCallback(
@@ -138,7 +269,7 @@ export function BreakdownStage() {
       event.evt.preventDefault();
       event.cancelBubble = true;
 
-      const currentTransform = sliceTransformsRef.current[slice.id] ?? slice.imageTransform;
+      const currentTransform = slice.imageTransform;
       const nextScale =
         event.evt.deltaY < 0
           ? currentTransform.scale * ZOOM_FACTOR
@@ -160,10 +291,18 @@ export function BreakdownStage() {
         return;
       }
 
+      const editorOverlays = stage.find(`.${EDITOR_OVERLAY_NAME}`);
+      editorOverlays.forEach((node) => node.hide());
+      stage.draw();
+
       const dataUrl = stage.toDataURL({
         pixelRatio: 1 / previewScale,
         mimeType: "image/png",
       });
+
+      editorOverlays.forEach((node) => node.show());
+      stage.draw();
+
       const link = document.createElement("a");
       link.download = "deck-breakdown.png";
       link.href = dataUrl;
@@ -218,7 +357,6 @@ export function BreakdownStage() {
                 const sliceImage = geometry.slice.assetId ? assetImages[geometry.slice.assetId] : null;
                 const selected = project.pieChart.selectedSliceId === geometry.slice.id;
                 const canTransformImage = selected && Boolean(sliceImage);
-                const imageTransform = geometry.slice.imageTransform;
 
                 return (
                   <Group key={geometry.slice.id}>
@@ -228,39 +366,21 @@ export function BreakdownStage() {
                       listening={false}
                       points={geometry.points}
                     />
-                    <Group
-                      clipFunc={(context) => {
-                        traceWedgePath(context, geometry.points);
-                      }}
-                      listening={false}
-                    >
-                      {sliceImage ? (
-                        <Image
-                          image={sliceImage}
-                          offsetX={project.pieChart.radius}
-                          offsetY={project.pieChart.radius}
-                          rotation={imageTransform.rotation}
-                          scaleX={imageTransform.scale}
-                          scaleY={imageTransform.scale}
-                          width={project.pieChart.radius * 2}
-                          height={project.pieChart.radius * 2}
-                          x={imageTransform.x}
-                          y={imageTransform.y}
-                        />
-                      ) : null}
-                    </Group>
                     <Line
                       closed
-                      draggable={canTransformImage}
                       fill={HIT_FILL}
                       onClick={() => setSelectedSlice(geometry.slice.id)}
-                      onDragMove={(event) =>
-                        handleSliceDragMove(event, geometry.slice, canTransformImage)
-                      }
-                      onDragStart={() => setSelectedSlice(geometry.slice.id)}
                       onTap={() => setSelectedSlice(geometry.slice.id)}
                       onWheel={(event) => handleSliceWheel(event, geometry.slice, canTransformImage)}
                       points={geometry.points}
+                    />
+                    <SliceImageEditor
+                      geometry={geometry}
+                      image={sliceImage ?? null}
+                      isSelected={selected}
+                      radius={project.pieChart.radius}
+                      setSelectedSlice={setSelectedSlice}
+                      updateSlice={updateSlice}
                     />
                     <Line
                       closed
