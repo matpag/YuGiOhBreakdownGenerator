@@ -3,6 +3,7 @@ import { defaultDocument } from "../data/defaultProject";
 import type {
   AssetId,
   BreakdownDocument,
+  CanvasSettings,
   ChartSlice,
   PieChartSettings,
   ProjectAsset,
@@ -14,6 +15,7 @@ interface ProjectState extends BreakdownDocument {
   project: BreakdownDocument["project"];
   selectedSlice: ChartSlice | null;
   loadDocument: (document: BreakdownDocument) => void;
+  updateCanvas: (updates: Partial<CanvasSettings>) => void;
   setTitle: (text: string) => void;
   updateTitle: (updates: Partial<TextStyle>) => void;
   updatePieChart: (updates: Partial<Omit<PieChartSettings, "slices">>) => void;
@@ -45,6 +47,29 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
     set({
       project: document.project,
       assets: document.assets,
+    }),
+  updateCanvas: (updates) =>
+    set((state) => {
+      const nextCanvas = {
+        ...state.project.canvas,
+        ...updates,
+      };
+
+      return {
+        project: {
+          ...state.project,
+          canvas: nextCanvas,
+          background: {
+            ...state.project.background,
+            width: nextCanvas.width,
+            height: nextCanvas.height,
+          },
+          title: {
+            ...state.project.title,
+            x: updates.width === undefined ? state.project.title.x : nextCanvas.width / 2,
+          },
+        },
+      };
     }),
   setTitle: (text) => get().updateTitle({ text }),
   updateTitle: (updates) =>

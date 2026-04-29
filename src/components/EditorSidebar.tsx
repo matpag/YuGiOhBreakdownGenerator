@@ -8,6 +8,7 @@ export function EditorSidebar() {
   const project = useProjectStore((state) => state.project);
   const assets = useProjectStore((state) => state.assets);
   const selectedSlice = useProjectStore((state) => state.selectedSlice);
+  const updateCanvas = useProjectStore((state) => state.updateCanvas);
   const setTitle = useProjectStore((state) => state.setTitle);
   const updateTitle = useProjectStore((state) => state.updateTitle);
   const updatePieChart = useProjectStore((state) => state.updatePieChart);
@@ -66,11 +67,31 @@ export function EditorSidebar() {
         <div className="field-row">
           <label>
             Width
-            <input value={project.canvas.width} readOnly />
+            <input
+              min="256"
+              step="1"
+              type="number"
+              value={project.canvas.width}
+              onChange={(event) =>
+                updateCanvas({
+                  width: Math.round(readNumber(event.target.value, project.canvas.width, 256)),
+                })
+              }
+            />
           </label>
           <label>
             Height
-            <input value={project.canvas.height} readOnly />
+            <input
+              min="256"
+              step="1"
+              type="number"
+              value={project.canvas.height}
+              onChange={(event) =>
+                updateCanvas({
+                  height: Math.round(readNumber(event.target.value, project.canvas.height, 256)),
+                })
+              }
+            />
           </label>
         </div>
       </section>

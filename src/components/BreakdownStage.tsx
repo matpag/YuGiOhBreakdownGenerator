@@ -5,7 +5,7 @@ import { getSliceGeometries, labelPosition, traceWedgePath } from "../lib/geomet
 import { useProjectStore } from "../store/projectStore";
 import type { ChartSlice, ProjectAsset, SliceImageTransform } from "../types/project";
 
-const PREVIEW_SIZE = 900;
+const PREVIEW_MAX_SIZE = 900;
 const HIT_FILL = "rgba(255,255,255,0.001)";
 const MAX_IMAGE_SCALE = 4;
 const MIN_IMAGE_SCALE = 0.35;
@@ -77,7 +77,12 @@ export function BreakdownStage() {
   const assets = useProjectStore((state) => state.assets);
   const setSelectedSlice = useProjectStore((state) => state.setSelectedSlice);
   const updateSlice = useProjectStore((state) => state.updateSlice);
-  const scale = PREVIEW_SIZE / project.canvas.width;
+  const previewScale = Math.min(
+    PREVIEW_MAX_SIZE / project.canvas.width,
+    PREVIEW_MAX_SIZE / project.canvas.height,
+  );
+  const previewWidth = Math.round(project.canvas.width * previewScale);
+  const previewHeight = Math.round(project.canvas.height * previewScale);
   const assetImages = useAssetImages(assets);
   const backgroundImage = project.background.assetId ? assetImages[project.background.assetId] : null;
   const logoImage = project.logo.assetId ? assetImages[project.logo.assetId] : null;
@@ -156,7 +161,7 @@ export function BreakdownStage() {
       }
 
       const dataUrl = stage.toDataURL({
-        pixelRatio: project.canvas.width / PREVIEW_SIZE,
+        pixelRatio: 1 / previewScale,
         mimeType: "image/png",
       });
       const link = document.createElement("a");
@@ -167,17 +172,17 @@ export function BreakdownStage() {
 
     window.addEventListener("graphic-templater:export-png", handleExport);
     return () => window.removeEventListener("graphic-templater:export-png", handleExport);
-  }, [project.canvas.width]);
+  }, [previewScale]);
 
   return (
     <div className="canvas-wrap">
       <div className="stage-shell">
         <Stage
           ref={stageRef}
-          width={PREVIEW_SIZE}
-          height={PREVIEW_SIZE}
-          scaleX={scale}
-          scaleY={scale}
+          width={previewWidth}
+          height={previewHeight}
+          scaleX={previewScale}
+          scaleY={previewScale}
         >
           <Layer>
             <Rect width={project.canvas.width} height={project.canvas.height} fill="#202536" />
