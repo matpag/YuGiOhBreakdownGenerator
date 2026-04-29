@@ -513,7 +513,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
       },
     })),
   exportPng: () => {
-    window.dispatchEvent(new CustomEvent("graphic-templater:export-png"));
+    window.dispatchEvent(new CustomEvent("deck-breakdown-maker:export-png"));
   },
 }));
 

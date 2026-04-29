@@ -12,7 +12,7 @@ type Theme = "light" | "dark";
 export default function App() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [theme, setTheme] = useState<Theme>(() =>
-    window.localStorage.getItem("graphic-templater-theme") === "dark" ? "dark" : "light",
+    window.localStorage.getItem("deck-breakdown-maker-theme") === "dark" ? "dark" : "light",
   );
   const project = useProjectStore((state) => state.project);
   const assets = useProjectStore((state) => state.assets);
@@ -25,7 +25,7 @@ export default function App() {
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
-    window.localStorage.setItem("graphic-templater-theme", theme);
+    window.localStorage.setItem("deck-breakdown-maker-theme", theme);
   }, [theme]);
 
   async function handleSaveProject() {
@@ -50,7 +50,7 @@ export default function App() {
     <main className="app-shell">
       <header className="topbar">
         <div>
-          <h1>Graphic Templater</h1>
+          <h1>Deck Breakdown Maker</h1>
           <p>{project.title.text}</p>
         </div>
         <div className="topbar-actions">

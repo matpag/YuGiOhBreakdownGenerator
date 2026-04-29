@@ -408,8 +408,8 @@ export function BreakdownStage() {
       link.click();
     }
 
-    window.addEventListener("graphic-templater:export-png", handleExport);
-    return () => window.removeEventListener("graphic-templater:export-png", handleExport);
+    window.addEventListener("deck-breakdown-maker:export-png", handleExport);
+    return () => window.removeEventListener("deck-breakdown-maker:export-png", handleExport);
   }, [previewScale]);
 
   return (

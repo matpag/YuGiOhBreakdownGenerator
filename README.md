@@ -1,4 +1,4 @@
-# Graphic Templater
+# Deck Breakdown Maker
 
 Local-only desktop web app for generating Yu-Gi-Oh retroformat deck breakdown graphics from reusable templates.
 
