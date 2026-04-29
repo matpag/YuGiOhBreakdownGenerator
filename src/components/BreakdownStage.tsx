@@ -87,6 +87,11 @@ interface SliceImageEditorProps {
   updateSlice: (sliceId: string, updates: Partial<ChartSlice>) => void;
 }
 
+interface DraftZoomInputProps {
+  onCommit: (value: number) => void;
+  value: number;
+}
+
 function SliceImageEditor({
   geometry,
   image,
@@ -242,6 +247,59 @@ function getSliceImageSize(image: HTMLImageElement | null, radius: number) {
   };
 }
 
+function DraftZoomInput({ onCommit, value }: DraftZoomInputProps) {
+  const [draft, setDraft] = useState(String(value));
+  const [isEditing, setIsEditing] = useState(false);
+
+  useEffect(() => {
+    if (!isEditing) {
+      setDraft(String(value));
+    }
+  }, [isEditing, value]);
+
+  function parseDraft(nextDraft: string) {
+    if (nextDraft.trim() === "") {
+      return null;
+    }
+
+    const nextValue = Number(nextDraft);
+    return Number.isFinite(nextValue) && nextValue > 0 ? nextValue : null;
+  }
+
+  return (
+    <input
+      inputMode="decimal"
+      min={5}
+      step={5}
+      type="text"
+      value={draft}
+      onFocus={() => setIsEditing(true)}
+      onBlur={() => {
+        const parsedDraft = parseDraft(draft);
+
+        setIsEditing(false);
+
+        if (parsedDraft === null) {
+          setDraft(String(value));
+          return;
+        }
+
+        setDraft(String(parsedDraft));
+      }}
+      onChange={(event) => {
+        const nextDraft = event.target.value;
+        const nextValue = parseDraft(nextDraft);
+
+        setDraft(nextDraft);
+
+        if (nextValue !== null) {
+          onCommit(nextValue);
+        }
+      }}
+    />
+  );
+}
+
 export function BreakdownStage() {
   const stageRef = useRef<Konva.Stage>(null);
   const viewportRef = useRef<HTMLDivElement>(null);
@@ -369,18 +427,11 @@ export function BreakdownStage() {
         </div>
         <label className="zoom-custom">
           Zoom
-          <input
-            min="5"
-            step="5"
-            type="number"
+          <DraftZoomInput
             value={zoomMode === "fit" ? Math.round(fitScale * 100) : zoomPercent}
-            onChange={(event) => {
-              const nextPercent = Number(event.target.value);
-
-              if (Number.isFinite(nextPercent) && nextPercent > 0) {
-                setZoomMode("fixed");
-                setZoomPercent(nextPercent);
-              }
+            onCommit={(nextPercent) => {
+              setZoomMode("fixed");
+              setZoomPercent(nextPercent);
             }}
           />
         </label>

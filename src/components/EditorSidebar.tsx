@@ -31,6 +31,13 @@ interface LocalFontData {
   family: string;
 }
 
+interface DraftNumberInputProps {
+  min?: number;
+  onCommit: (value: number) => void;
+  step?: number;
+  value: number;
+}
+
 declare global {
   interface Window {
     queryLocalFonts?: () => Promise<LocalFontData[]>;
@@ -54,8 +61,6 @@ export function EditorSidebar() {
   const setLogoAsset = useProjectStore((state) => state.setLogoAsset);
   const setSliceAsset = useProjectStore((state) => state.setSliceAsset);
   const setSelectedSlice = useProjectStore((state) => state.setSelectedSlice);
-  const [canvasWidthDraft, setCanvasWidthDraft] = useState(String(project.canvas.width));
-  const [canvasHeightDraft, setCanvasHeightDraft] = useState(String(project.canvas.height));
   const [fontOptions, setFontOptions] = useState(() =>
     mergeFontOptions([
       ...FALLBACK_FONT_OPTIONS,
@@ -65,14 +70,6 @@ export function EditorSidebar() {
     ]),
   );
   const [fontAccessRequested, setFontAccessRequested] = useState(false);
-
-  useEffect(() => {
-    setCanvasWidthDraft(String(project.canvas.width));
-  }, [project.canvas.width]);
-
-  useEffect(() => {
-    setCanvasHeightDraft(String(project.canvas.height));
-  }, [project.canvas.height]);
 
   useEffect(() => {
     setFontOptions((currentOptions) =>
@@ -165,29 +162,6 @@ export function EditorSidebar() {
     setFontOptions((currentOptions) => mergeFontOptions([...currentOptions, family]));
   }
 
-  function readNumber(value: string, fallback: number, min?: number) {
-    if (value.trim() === "") {
-      return fallback;
-    }
-
-    const nextValue = Number(value);
-    if (!Number.isFinite(nextValue)) {
-      return fallback;
-    }
-
-    return min === undefined ? nextValue : Math.max(min, nextValue);
-  }
-
-  function readCanvasDimension(value: string) {
-    const nextValue = Number(value);
-
-    if (!Number.isFinite(nextValue) || nextValue <= 0) {
-      return null;
-    }
-
-    return Math.round(nextValue);
-  }
-
   const backgroundAsset = project.background.assetId ? assets[project.background.assetId] : null;
   const logoAsset = project.logo.assetId ? assets[project.logo.assetId] : null;
   const selectedSlice =
@@ -201,50 +175,20 @@ export function EditorSidebar() {
         <div className="field-row">
           <label>
             Width
-            <input
-              inputMode="numeric"
-              step="1"
-              type="text"
-              value={canvasWidthDraft}
-              onBlur={() => {
-                if (canvasWidthDraft.trim() === "") {
-                  setCanvasWidthDraft(String(project.canvas.width));
-                }
-              }}
-              onChange={(event) => {
-                const nextDraft = event.target.value;
-                const nextWidth = readCanvasDimension(nextDraft);
-
-                setCanvasWidthDraft(nextDraft);
-
-                if (nextWidth !== null) {
-                  updateCanvas({ width: nextWidth });
-                }
-              }}
+            <DraftNumberInput
+              min={1}
+              step={1}
+              value={project.canvas.width}
+              onCommit={(width) => updateCanvas({ width: Math.round(width) })}
             />
           </label>
           <label>
             Height
-            <input
-              inputMode="numeric"
-              step="1"
-              type="text"
-              value={canvasHeightDraft}
-              onBlur={() => {
-                if (canvasHeightDraft.trim() === "") {
-                  setCanvasHeightDraft(String(project.canvas.height));
-                }
-              }}
-              onChange={(event) => {
-                const nextDraft = event.target.value;
-                const nextHeight = readCanvasDimension(nextDraft);
-
-                setCanvasHeightDraft(nextDraft);
-
-                if (nextHeight !== null) {
-                  updateCanvas({ height: nextHeight });
-                }
-              }}
+            <DraftNumberInput
+              min={1}
+              step={1}
+              value={project.canvas.height}
+              onCommit={(height) => updateCanvas({ height: Math.round(height) })}
             />
           </label>
         </div>
@@ -274,13 +218,12 @@ export function EditorSidebar() {
           </label>
           <label>
             Size
-            <input
-              min="8"
-              type="number"
+            <DraftNumberInput
+              min={8}
               value={project.title.fontSize}
-              onChange={(event) =>
+              onCommit={(fontSize) =>
                 updateTitle({
-                  fontSize: readNumber(event.target.value, project.title.fontSize, 8),
+                  fontSize,
                 })
               }
             />
@@ -309,25 +252,23 @@ export function EditorSidebar() {
         <div className="field-row">
           <label>
             Stroke width
-            <input
-              min="0"
-              type="number"
+            <DraftNumberInput
+              min={0}
               value={project.title.strokeWidth}
-              onChange={(event) =>
+              onCommit={(strokeWidth) =>
                 updateTitle({
-                  strokeWidth: readNumber(event.target.value, project.title.strokeWidth, 0),
+                  strokeWidth,
                 })
               }
             />
           </label>
           <label>
             Y
-            <input
-              type="number"
+            <DraftNumberInput
               value={project.title.y}
-              onChange={(event) =>
+              onCommit={(y) =>
                 updateTitle({
-                  y: readNumber(event.target.value, project.title.y),
+                  y,
                 })
               }
             />
@@ -406,34 +347,27 @@ export function EditorSidebar() {
         <div className="field-row">
           <label>
             X
-            <input
-              type="number"
+            <DraftNumberInput
               value={project.pieChart.x}
-              onChange={(event) =>
-                updatePieChart({ x: readNumber(event.target.value, project.pieChart.x) })
-              }
+              onCommit={(x) => updatePieChart({ x })}
             />
           </label>
           <label>
             Y
-            <input
-              type="number"
+            <DraftNumberInput
               value={project.pieChart.y}
-              onChange={(event) =>
-                updatePieChart({ y: readNumber(event.target.value, project.pieChart.y) })
-              }
+              onCommit={(y) => updatePieChart({ y })}
             />
           </label>
         </div>
         <label>
           Radius
-          <input
-            min="80"
-            type="number"
+          <DraftNumberInput
+            min={80}
             value={project.pieChart.radius}
-            onChange={(event) =>
+            onCommit={(radius) =>
               updatePieChart({
-                radius: readNumber(event.target.value, project.pieChart.radius, 80),
+                radius,
               })
             }
           />
@@ -463,15 +397,14 @@ export function EditorSidebar() {
           </label>
           <label>
             Label size
-            <input
-              min="1"
-              type="number"
+            <DraftNumberInput
+              min={1}
               value={project.pieChart.labelStyle.fontSize}
-              onChange={(event) =>
+              onCommit={(fontSize) =>
                 updatePieChart({
                   labelStyle: {
                     ...project.pieChart.labelStyle,
-                    fontSize: readNumber(event.target.value, project.pieChart.labelStyle.fontSize, 1),
+                    fontSize,
                   },
                 })
               }
@@ -514,19 +447,14 @@ export function EditorSidebar() {
         </div>
         <label>
           Label stroke width
-          <input
-            min="0"
-            type="number"
+          <DraftNumberInput
+            min={0}
             value={project.pieChart.labelStyle.strokeWidth}
-            onChange={(event) =>
+            onCommit={(strokeWidth) =>
               updatePieChart({
                 labelStyle: {
                   ...project.pieChart.labelStyle,
-                  strokeWidth: readNumber(
-                    event.target.value,
-                    project.pieChart.labelStyle.strokeWidth,
-                    0,
-                  ),
+                  strokeWidth,
                 },
               })
             }
@@ -574,31 +502,25 @@ export function EditorSidebar() {
             />
           </label>
           <label>
-            Value
-            <input
-              min="1"
-              type="number"
+            Slice value
+            <DraftNumberInput
+              min={1}
               value={selectedSlice.value}
-              onChange={(event) =>
+              onCommit={(value) =>
                 updateSlice(selectedSlice.id, {
-                  value: readNumber(event.target.value, selectedSlice.value, 1),
+                  value,
                 })
               }
             />
           </label>
           <label>
             Label distance
-            <input
-              min="0"
-              type="number"
+            <DraftNumberInput
+              min={0}
               value={selectedSlice.labelDistance ?? DEFAULT_LABEL_DISTANCE}
-              onChange={(event) =>
+              onCommit={(labelDistance) =>
                 updateSlice(selectedSlice.id, {
-                  labelDistance: readNumber(
-                    event.target.value,
-                    selectedSlice.labelDistance ?? DEFAULT_LABEL_DISTANCE,
-                    0,
-                  ),
+                  labelDistance,
                 })
               }
             />
@@ -624,34 +546,25 @@ export function EditorSidebar() {
           <div className="field-row">
             <label>
               Scale
-              <input
-                min="0.1"
-                step="0.05"
-                type="number"
+              <DraftNumberInput
+                min={0.1}
+                step={0.05}
                 value={selectedSlice.imageTransform.scale}
-                onChange={(event) =>
+                onCommit={(scale) =>
                   updateSliceImageTransform(selectedSlice.id, {
-                    scale: readNumber(
-                      event.target.value,
-                      selectedSlice.imageTransform.scale,
-                      0.1,
-                    ),
+                    scale,
                   })
                 }
               />
             </label>
             <label>
               Rotation
-              <input
-                step="1"
-                type="number"
+              <DraftNumberInput
+                step={1}
                 value={selectedSlice.imageTransform.rotation}
-                onChange={(event) =>
+                onCommit={(rotation) =>
                   updateSliceImageTransform(selectedSlice.id, {
-                    rotation: readNumber(
-                      event.target.value,
-                      selectedSlice.imageTransform.rotation,
-                    ),
+                    rotation,
                   })
                 }
               />
@@ -660,24 +573,22 @@ export function EditorSidebar() {
           <div className="field-row">
             <label>
               X
-              <input
-                type="number"
+              <DraftNumberInput
                 value={selectedSlice.imageTransform.x}
-                onChange={(event) =>
+                onCommit={(x) =>
                   updateSliceImageTransform(selectedSlice.id, {
-                    x: readNumber(event.target.value, selectedSlice.imageTransform.x),
+                    x,
                   })
                 }
               />
             </label>
             <label>
               Y
-              <input
-                type="number"
+              <DraftNumberInput
                 value={selectedSlice.imageTransform.y}
-                onChange={(event) =>
+                onCommit={(y) =>
                   updateSliceImageTransform(selectedSlice.id, {
-                    y: readNumber(event.target.value, selectedSlice.imageTransform.y),
+                    y,
                   })
                 }
               />
@@ -686,6 +597,64 @@ export function EditorSidebar() {
         </section>
       ) : null}
     </aside>
+  );
+}
+
+function DraftNumberInput({ min, onCommit, step, value }: DraftNumberInputProps) {
+  const [draft, setDraft] = useState(String(value));
+  const [isEditing, setIsEditing] = useState(false);
+
+  useEffect(() => {
+    if (!isEditing) {
+      setDraft(String(value));
+    }
+  }, [isEditing, value]);
+
+  function parseDraft(nextDraft: string) {
+    if (nextDraft.trim() === "") {
+      return null;
+    }
+
+    const nextValue = Number(nextDraft);
+
+    if (!Number.isFinite(nextValue) || (min !== undefined && nextValue < min)) {
+      return null;
+    }
+
+    return nextValue;
+  }
+
+  return (
+    <input
+      inputMode="decimal"
+      min={min}
+      step={step}
+      type="text"
+      value={draft}
+      onFocus={() => setIsEditing(true)}
+      onBlur={() => {
+        const parsedDraft = parseDraft(draft);
+
+        setIsEditing(false);
+
+        if (parsedDraft === null) {
+          setDraft(String(value));
+          return;
+        }
+
+        setDraft(String(parsedDraft));
+      }}
+      onChange={(event) => {
+        const nextDraft = event.target.value;
+        const nextValue = parseDraft(nextDraft);
+
+        setDraft(nextDraft);
+
+        if (nextValue !== null) {
+          onCommit(nextValue);
+        }
+      }}
+    />
   );
 }
 
