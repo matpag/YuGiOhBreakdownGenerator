@@ -302,7 +302,7 @@ function SliceLabelEditor({
     setSelectedLabelSliceId(geometry.slice.id);
   }
 
-  function commitLabelBox(node: Konva.Text) {
+  function applyLabelBoxResize(node: Konva.Text) {
     const nextLabelBox = clampLabelBoxToCanvas(
       {
         x: node.x(),
@@ -314,6 +314,22 @@ function SliceLabelEditor({
     );
 
     node.scale({ x: 1, y: 1 });
+    node.position({ x: nextLabelBox.x, y: nextLabelBox.y });
+    node.size({ width: nextLabelBox.width, height: nextLabelBox.height });
+
+    return nextLabelBox;
+  }
+
+  function handleLabelTransform(event: Konva.KonvaEventObject<Event>) {
+    const node = event.target as Konva.Text;
+
+    applyLabelBoxResize(node);
+    node.getLayer()?.batchDraw();
+  }
+
+  function commitLabelBox(node: Konva.Text) {
+    const nextLabelBox = applyLabelBoxResize(node);
+
     updateSlice(geometry.slice.id, {
       labelBox: nextLabelBox,
     });
@@ -333,6 +349,7 @@ function SliceLabelEditor({
         onClick={selectLabel}
         onDragEnd={(event) => commitLabelBox(event.target as Konva.Text)}
         onTap={selectLabel}
+        onTransform={handleLabelTransform}
         onTransformEnd={(event) => commitLabelBox(event.target as Konva.Text)}
         stroke={labelStyle.stroke}
         strokeWidth={labelStyle.strokeWidth}
