@@ -29,9 +29,32 @@ const ZOOM_FACTOR = 1.08;
 const EDITOR_OVERLAY_NAME = "editor-overlay";
 const ZOOM_PRESETS = [25, 50, 75, 100, 150, 200];
 const CANVAS_PADDING = 56;
+const OUTER_TEXT_STROKE_MULTIPLIER = 2;
 
 function clamp(value: number, min: number, max: number) {
   return Math.min(Math.max(value, min), max);
+}
+
+function pointInPolygon(point: { x: number; y: number }, points: number[]) {
+  let inside = false;
+
+  for (let index = 0, previousIndex = points.length - 2; index < points.length; index += 2) {
+    const xi = points[index];
+    const yi = points[index + 1];
+    const xj = points[previousIndex];
+    const yj = points[previousIndex + 1];
+    const intersects =
+      yi > point.y !== yj > point.y &&
+      point.x < ((xj - xi) * (point.y - yi)) / (yj - yi) + xi;
+
+    if (intersects) {
+      inside = !inside;
+    }
+
+    previousIndex = index;
+  }
+
+  return inside;
 }
 
 function useAssetImages(assets: Record<string, ProjectAsset>) {
@@ -94,6 +117,7 @@ interface SliceImageEditorProps {
   image: HTMLImageElement | null;
   isSelected: boolean;
   layer: SliceImageLayer;
+  selectSliceAtPointer: (event: Konva.KonvaEventObject<MouseEvent | TouchEvent>) => boolean;
   radius: number;
   setSelectedSlice: (sliceId: string) => void;
   setSelectedSliceImageLayer: (sliceId: string, layerId: string) => void;
@@ -117,6 +141,7 @@ function SliceImageEditor({
   isSelected,
   layer,
   radius,
+  selectSliceAtPointer,
   setSelectedSlice,
   setSelectedSliceImageLayer,
   updateSliceImageLayerTransform,
@@ -190,6 +215,45 @@ function SliceImageEditor({
     setSelectedSliceImageLayer(geometry.slice.id, layer.id);
   }
 
+  function moveImageNodeTo(node: Konva.Node) {
+    const imageNode = imageRef.current;
+
+    if (!imageNode) {
+      return;
+    }
+
+    imageNode.position({ x: node.x(), y: node.y() });
+    transformerRef.current?.forceUpdate();
+    node.getLayer()?.batchDraw();
+  }
+
+  function commitDragProxyTransform(node: Konva.Node) {
+    const imageNode = imageRef.current;
+
+    if (!imageNode) {
+      return;
+    }
+
+    imageNode.position({ x: node.x(), y: node.y() });
+    commitImageTransform(imageNode);
+  }
+
+  function handleSelectedImageBoundsClick(
+    event: Konva.KonvaEventObject<MouseEvent | TouchEvent>,
+  ) {
+    const relativePointer = event.target.getParent()?.getRelativePointerPosition();
+
+    if (relativePointer && !pointInPolygon(relativePointer, geometry.points)) {
+      event.cancelBubble = true;
+
+      if (selectSliceAtPointer(event)) {
+        return;
+      }
+    }
+
+    selectLayer();
+  }
+
   return (
     <>
       <Group
@@ -206,13 +270,6 @@ function SliceImageEditor({
           offsetY={imageSize.height / 2}
           onClick={selectLayer}
           onDragEnd={(event) => commitImageTransform(event.target as Konva.Image)}
-          onDragMove={(event) => {
-            updateSliceImageLayerTransform(geometry.slice.id, layer.id, {
-              ...transform,
-              x: event.target.x(),
-              y: event.target.y(),
-            });
-          }}
           onTap={selectLayer}
           onTransformEnd={(event) => commitImageTransform(event.target as Konva.Image)}
           onWheel={handleImageWheel}
@@ -225,22 +282,43 @@ function SliceImageEditor({
         />
       </Group>
       {isSelected ? (
-        <Transformer
-          ref={transformerRef}
-          anchorCornerRadius={3}
-          anchorFill="#2f80ed"
-          anchorSize={14}
-          anchorStroke="#ffffff"
-          anchorStrokeWidth={2}
-          borderDash={[8, 6]}
-          borderStroke="#2f80ed"
-          borderStrokeWidth={2}
-          enabledAnchors={["top-left", "top-right", "bottom-left", "bottom-right"]}
-          flipEnabled={false}
-          keepRatio
-          name={EDITOR_OVERLAY_NAME}
-          rotateEnabled={false}
-        />
+        <>
+          <Rect
+            draggable
+            fill={HIT_FILL}
+            height={imageSize.height}
+            name={EDITOR_OVERLAY_NAME}
+            offsetX={imageSize.width / 2}
+            offsetY={imageSize.height / 2}
+            onClick={handleSelectedImageBoundsClick}
+            onDragEnd={(event) => commitDragProxyTransform(event.target)}
+            onDragMove={(event) => moveImageNodeTo(event.target)}
+            onTap={handleSelectedImageBoundsClick}
+            onWheel={handleImageWheel}
+            rotation={transform.rotation}
+            scaleX={transform.scale}
+            scaleY={transform.scale}
+            width={imageSize.width}
+            x={transform.x}
+            y={transform.y}
+          />
+          <Transformer
+            ref={transformerRef}
+            anchorCornerRadius={3}
+            anchorFill="#2f80ed"
+            anchorSize={14}
+            anchorStroke="#ffffff"
+            anchorStrokeWidth={2}
+            borderDash={[8, 6]}
+            borderStroke="#2f80ed"
+            borderStrokeWidth={2}
+            enabledAnchors={["top-left", "top-right", "bottom-left", "bottom-right"]}
+            flipEnabled={false}
+            keepRatio
+            name={EDITOR_OVERLAY_NAME}
+            rotateEnabled={false}
+          />
+        </>
       ) : null}
     </>
   );
@@ -342,9 +420,10 @@ function SliceLabelEditor({
         align="center"
         draggable={isSelected}
         fill={labelStyle.fill}
+        fillAfterStrokeEnabled
         fontFamily={labelStyle.fontFamily}
         fontSize={labelStyle.fontSize}
-        fontStyle="bold"
+        fontStyle={labelStyle.fontWeight}
         height={labelBox.height}
         onClick={selectLabel}
         onDragEnd={(event) => commitLabelBox(event.target as Konva.Text)}
@@ -352,7 +431,7 @@ function SliceLabelEditor({
         onTransform={handleLabelTransform}
         onTransformEnd={(event) => commitLabelBox(event.target as Konva.Text)}
         stroke={labelStyle.stroke}
-        strokeWidth={labelStyle.strokeWidth}
+        strokeWidth={labelStyle.strokeWidth * OUTER_TEXT_STROKE_MULTIPLIER}
         text={`${geometry.slice.label}\n(${geometry.slice.value})`}
         verticalAlign="middle"
         width={labelBox.width}
@@ -544,6 +623,29 @@ export function BreakdownStage() {
     setSelectedSlice(sliceId);
   }
 
+  function selectSliceAtPointer(event: Konva.KonvaEventObject<MouseEvent | TouchEvent>) {
+    const stage = event.target.getStage();
+    const pointer = stage?.getPointerPosition();
+
+    if (!stage || !pointer) {
+      return false;
+    }
+
+    const stagePoint = stage.getAbsoluteTransform().copy().invert().point(pointer);
+    const piePoint = {
+      x: stagePoint.x - project.pieChart.x,
+      y: stagePoint.y - project.pieChart.y,
+    };
+    const targetGeometry = slices.find((geometry) => pointInPolygon(piePoint, geometry.points));
+
+    if (!targetGeometry) {
+      return false;
+    }
+
+    selectSlice(targetGeometry.slice.id);
+    return true;
+  }
+
   const handleSliceWheel = useCallback(
     (event: Konva.KonvaEventObject<WheelEvent>, slice: ChartSlice) => {
       const activeLayer =
@@ -660,13 +762,14 @@ export function BreakdownStage() {
             <Text
               align="center"
               fill={project.title.fill}
+              fillAfterStrokeEnabled
               fontFamily={project.title.fontFamily}
               fontSize={project.title.fontSize}
-              fontStyle="bold"
+              fontStyle={project.title.fontWeight}
               listening={false}
               offsetX={project.canvas.width / 2}
               stroke={project.title.stroke}
-              strokeWidth={project.title.strokeWidth}
+              strokeWidth={project.title.strokeWidth * OUTER_TEXT_STROKE_MULTIPLIER}
               text={project.title.text}
               width={project.canvas.width}
               x={project.canvas.width / 2}
@@ -717,6 +820,7 @@ export function BreakdownStage() {
                         key={layer.id}
                         layer={layer}
                         radius={project.pieChart.radius}
+                        selectSliceAtPointer={selectSliceAtPointer}
                         clearSelectedLabel={() => setSelectedLabelSliceId(null)}
                         setSelectedSlice={setSelectedSlice}
                         setSelectedSliceImageLayer={setSelectedSliceImageLayer}

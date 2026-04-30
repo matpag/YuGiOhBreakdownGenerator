@@ -1,7 +1,7 @@
 import type { ProjectAsset } from "../types/project";
 
-export const MAX_IMAGE_FILE_SIZE_BYTES = 5 * 1024 * 1024;
-export const MAX_IMAGE_FILE_SIZE_LABEL = "5 MB";
+export const MAX_IMAGE_FILE_SIZE_BYTES = 10 * 1024 * 1024;
+export const MAX_IMAGE_FILE_SIZE_LABEL = "10 MB";
 const IMAGE_FILE_EXTENSION_PATTERN = /\.(avif|bmp|gif|jpe?g|png|svg|webp)$/i;
 
 export function fileToAsset(file: File): Promise<ProjectAsset> {

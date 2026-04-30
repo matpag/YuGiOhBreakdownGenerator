@@ -10,6 +10,7 @@ export interface TextStyle {
   x: number;
   y: number;
   fontFamily: string;
+  fontWeight: string;
   fontSize: number;
   fill: string;
   stroke: string;
@@ -18,6 +19,7 @@ export interface TextStyle {
 
 export interface LabelTextStyle {
   fontFamily: string;
+  fontWeight: string;
   fontSize: number;
   fill: string;
   stroke: string;
