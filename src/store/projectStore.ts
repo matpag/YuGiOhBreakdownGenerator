@@ -26,10 +26,6 @@ interface ProjectState extends BreakdownDocument {
   updatePieChart: (updates: Partial<Omit<PieChartSettings, "slices">>) => void;
   setSelectedSlice: (sliceId: string) => void;
   updateSlice: (sliceId: string, updates: Partial<ChartSlice>) => void;
-  updateSliceImageTransform: (
-    sliceId: string,
-    updates: Partial<SliceImageTransform>,
-  ) => void;
   updateSliceImageLayerTransform: (
     sliceId: string,
     layerId: string,
@@ -52,72 +48,9 @@ interface ProjectState extends BreakdownDocument {
   exportPng: () => void;
 }
 
-function normalizeDocument(document: BreakdownDocument): BreakdownDocument {
-  return {
-    assets: document.assets,
-    project: {
-      ...document.project,
-      fonts: document.project.fonts ?? [],
-      imageLibrary: document.project.imageLibrary ?? [],
-      background: {
-        ...document.project.background,
-        width: document.project.canvas.width,
-        height: document.project.canvas.height,
-      },
-      title: {
-        ...document.project.title,
-        fontWeight: document.project.title.fontWeight ?? "700",
-        x: document.project.canvas.width / 2,
-      },
-      pieChart: {
-        ...document.project.pieChart,
-        labelStyle: {
-          ...document.project.pieChart.labelStyle,
-          fontWeight: document.project.pieChart.labelStyle.fontWeight ?? "700",
-        },
-        slices: document.project.pieChart.slices.map(normalizeSlice),
-      },
-    },
-  };
-}
-
-function normalizeSlice(slice: ChartSlice): ChartSlice {
-  const imageLayers =
-    slice.imageLayers.length > 0
-      ? slice.imageLayers
-      : [
-          {
-            id: `${slice.id}-image-1`,
-            name: "Image 1",
-            assetId: slice.assetId,
-            imageTransform: slice.imageTransform,
-          },
-        ];
-  const selectedImageLayerId = imageLayers.some((layer) => layer.id === slice.selectedImageLayerId)
-    ? slice.selectedImageLayerId
-    : imageLayers[0]?.id ?? null;
-
-  return syncLegacySliceFields({
-    ...slice,
-    imageLayers,
-    selectedImageLayerId,
-  });
-}
-
-function syncLegacySliceFields(slice: ChartSlice): ChartSlice {
-  const primaryLayer = slice.imageLayers[0];
-
-  return {
-    ...slice,
-    assetId: primaryLayer?.assetId ?? null,
-    imageTransform: primaryLayer?.imageTransform ?? slice.imageTransform,
-  };
-}
-
 export const useProjectStore = create<ProjectState>((set, get) => ({
-  ...normalizeDocument(structuredClone(defaultDocument)),
-  loadDocument: (document) =>
-    set(normalizeDocument(document)),
+  ...structuredClone(defaultDocument),
+  loadDocument: (document) => set(document),
   updateCanvas: (updates) =>
     set((state) => {
       const nextCanvas = {
@@ -208,18 +141,6 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
         },
       };
     }),
-  updateSliceImageTransform: (sliceId, updates) =>
-    set((state) => ({
-      project: {
-        ...state.project,
-        pieChart: {
-          ...state.project.pieChart,
-          slices: state.project.pieChart.slices.map((slice) =>
-            slice.id === sliceId ? updateActiveSliceImageLayerTransform(slice, updates) : slice,
-          ),
-        },
-      },
-    })),
   updateSliceImageLayerTransform: (sliceId, layerId, updates) =>
     set((state) => ({
       project: {
@@ -228,7 +149,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
           ...state.project.pieChart,
           slices: state.project.pieChart.slices.map((slice) =>
             slice.id === sliceId
-              ? syncLegacySliceFields({
+              ? {
                   ...slice,
                   imageLayers: slice.imageLayers.map((layer) =>
                     layer.id === layerId
@@ -241,7 +162,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
                         }
                       : layer,
                   ),
-                })
+                }
               : slice,
           ),
         },
@@ -282,11 +203,11 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
               imageTransform: { ...DEFAULT_SLICE_IMAGE_TRANSFORM },
             };
 
-            return syncLegacySliceFields({
+            return {
               ...slice,
               imageLayers: [...slice.imageLayers, layer],
               selectedImageLayerId: layer.id,
-            });
+            };
           }),
         },
       },
@@ -304,14 +225,14 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
 
             const imageLayers = slice.imageLayers.filter((layer) => layer.id !== layerId);
 
-            return syncLegacySliceFields({
+            return {
               ...slice,
               imageLayers,
               selectedImageLayerId:
                 slice.selectedImageLayerId === layerId
-                  ? imageLayers[0]?.id ?? null
+                  ? imageLayers[0].id
                   : slice.selectedImageLayerId,
-            });
+            };
           }),
         },
       },
@@ -342,10 +263,10 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
             const [layer] = imageLayers.splice(currentIndex, 1);
             imageLayers.splice(nextIndex, 0, layer);
 
-            return syncLegacySliceFields({
+            return {
               ...slice,
               imageLayers,
-            });
+            };
           }),
         },
       },
@@ -362,8 +283,6 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
           label: `Deck ${index}`,
           labelDistance: 0,
           value: 1,
-          assetId: null,
-          imageTransform: { ...DEFAULT_SLICE_IMAGE_TRANSFORM },
           imageLayers: [
             {
               id: layerId,
@@ -512,28 +431,15 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
               return slice;
             }
 
-            const selectedLayerId = slice.selectedImageLayerId ?? slice.imageLayers[0]?.id;
-            const targetLayerId =
-              selectedLayerId ?? `slice-image-${crypto.randomUUID()}`;
-            const existingLayers =
-              slice.imageLayers.length > 0
-                ? slice.imageLayers
-                : [
-                    {
-                      id: targetLayerId,
-                      name: "Image 1",
-                      assetId: null,
-                      imageTransform: { ...DEFAULT_SLICE_IMAGE_TRANSFORM },
-                    },
-                  ];
+            const selectedLayerId = slice.selectedImageLayerId;
 
-            return syncLegacySliceFields({
+            return {
               ...slice,
-              imageLayers: existingLayers.map((layer) =>
-                layer.id === targetLayerId ? { ...layer, assetId } : layer,
+              imageLayers: slice.imageLayers.map((layer) =>
+                layer.id === selectedLayerId ? { ...layer, assetId } : layer,
               ),
-              selectedImageLayerId: targetLayerId,
-            });
+              selectedImageLayerId: selectedLayerId,
+            };
           }),
         },
       },
@@ -546,13 +452,13 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
           ...state.project.pieChart,
           slices: state.project.pieChart.slices.map((slice) =>
             slice.id === sliceId
-              ? syncLegacySliceFields({
+              ? {
                   ...slice,
                   imageLayers: slice.imageLayers.map((layer) =>
                     layer.id === layerId ? { ...layer, assetId } : layer,
                   ),
                   selectedImageLayerId: layerId,
-                })
+                }
               : slice,
           ),
         },
@@ -563,39 +469,6 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
   },
 }));
 
-function updateActiveSliceImageLayerTransform(
-  slice: ChartSlice,
-  updates: Partial<SliceImageTransform>,
-) {
-  const targetLayerId = slice.selectedImageLayerId ?? slice.imageLayers[0]?.id;
-
-  if (!targetLayerId) {
-    return syncLegacySliceFields({
-      ...slice,
-      imageTransform: {
-        ...slice.imageTransform,
-        ...updates,
-      },
-    });
-  }
-
-  return syncLegacySliceFields({
-    ...slice,
-    imageLayers: slice.imageLayers.map((layer) =>
-      layer.id === targetLayerId
-        ? {
-            ...layer,
-            imageTransform: {
-              ...layer.imageTransform,
-              ...updates,
-            },
-          }
-        : layer,
-    ),
-    selectedImageLayerId: targetLayerId,
-  });
-}
-
 function isAssetReferenced(
   project: BreakdownDocument["project"],
   imageLibrary: ImageLibraryItem[],
@@ -603,10 +476,8 @@ function isAssetReferenced(
 ) {
   return [
     project.background.assetId,
-    project.logo.assetId,
     ...project.fonts.map((font) => font.assetId),
     ...imageLibrary.map((item) => item.assetId),
-    ...project.pieChart.slices.map((slice) => slice.assetId),
     ...project.pieChart.slices.flatMap((slice) =>
       slice.imageLayers.map((layer) => layer.assetId),
     ),
