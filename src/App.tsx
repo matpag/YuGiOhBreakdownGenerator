@@ -8,10 +8,19 @@ import { exportBreakdownDocument, importBreakdownDocument } from "./lib/projectA
 import { useProjectStore } from "./store/projectStore";
 
 type Theme = "light" | "dark";
+type BusyAction = "opening" | "saving";
+
+const BUSY_MESSAGES: Record<BusyAction, string> = {
+  opening: "Opening project...",
+  saving: "Saving project...",
+};
 
 export default function App() {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [busyAction, setBusyAction] = useState<BusyAction | null>(null);
+  const [openedProjectFileName, setOpenedProjectFileName] = useState<string | null>(null);
   const [pngPreviewUrl, setPngPreviewUrl] = useState<string | null>(null);
+  const [saveVersion, setSaveVersion] = useState(1);
   const [theme, setTheme] = useState<Theme>(() =>
     window.localStorage.getItem("deck-breakdown-maker-theme") === "dark" ? "dark" : "light",
   );
@@ -56,12 +65,29 @@ export default function App() {
   }, [pngPreviewUrl]);
 
   async function handleSaveProject() {
-    const blob = await exportBreakdownDocument({ project, assets });
-    const link = document.createElement("a");
-    link.download = projectFileName(project.title.text);
-    link.href = URL.createObjectURL(blob);
-    link.click();
-    URL.revokeObjectURL(link.href);
+    setBusyAction("saving");
+
+    try {
+      await waitForPaint();
+
+      const blob = await exportBreakdownDocument({ project, assets });
+      const downloadName = openedProjectFileName
+        ? versionedProjectFileName(openedProjectFileName, saveVersion)
+        : projectFileName(project.title.text);
+      const link = document.createElement("a");
+      link.download = downloadName;
+      link.href = URL.createObjectURL(blob);
+      link.click();
+      URL.revokeObjectURL(link.href);
+
+      if (openedProjectFileName) {
+        setSaveVersion((currentVersion) => currentVersion + 1);
+      }
+    } catch (error) {
+      window.alert(error instanceof Error ? error.message : "Could not save the project.");
+    } finally {
+      setBusyAction(null);
+    }
   }
 
   async function handleOpenProject(file: File | undefined) {
@@ -69,8 +95,20 @@ export default function App() {
       return;
     }
 
-    const document = await importBreakdownDocument(await file.arrayBuffer());
-    loadDocument(document);
+    setBusyAction("opening");
+
+    try {
+      await waitForPaint();
+
+      const document = await importBreakdownDocument(await file.arrayBuffer());
+      loadDocument(document);
+      setOpenedProjectFileName(file.name);
+      setSaveVersion(1);
+    } catch (error) {
+      window.alert(error instanceof Error ? error.message : "Could not open the project.");
+    } finally {
+      setBusyAction(null);
+    }
   }
 
   function previewPng() {
@@ -89,7 +127,7 @@ export default function App() {
   }
 
   return (
-    <main className="app-shell">
+    <main className="app-shell" aria-busy={busyAction !== null}>
       <header className="topbar">
         <div>
           <h1>Deck Breakdown Maker</h1>
@@ -101,20 +139,35 @@ export default function App() {
             type="file"
             accept=".dhbreakdown,application/zip,application/vnd.dhbreakdown+zip"
             onChange={(event) => {
-              handleOpenProject(event.target.files?.[0]);
+              void handleOpenProject(event.target.files?.[0]);
               event.currentTarget.value = "";
             }}
           />
-          <button type="button" title="Open project" onClick={() => fileInputRef.current?.click()}>
+          <button
+            type="button"
+            title="Open project"
+            disabled={busyAction !== null}
+            onClick={() => fileInputRef.current?.click()}
+          >
             <FolderOpen size={18} />
           </button>
-          <button type="button" title="Save project" onClick={handleSaveProject}>
+          <button
+            type="button"
+            title="Save project"
+            disabled={busyAction !== null}
+            onClick={handleSaveProject}
+          >
             <FileArchive size={18} />
           </button>
-          <button type="button" title="Preview PNG" onClick={previewPng}>
+          <button
+            type="button"
+            title="Preview PNG"
+            disabled={busyAction !== null}
+            onClick={previewPng}
+          >
             <Eye size={18} />
           </button>
-          <button type="button" title="Export PNG" onClick={exportPng}>
+          <button type="button" title="Export PNG" disabled={busyAction !== null} onClick={exportPng}>
             <Download size={18} />
           </button>
           <button
@@ -122,6 +175,7 @@ export default function App() {
             type="button"
             title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
             aria-pressed={theme === "dark"}
+            disabled={busyAction !== null}
             onClick={() => setTheme((currentTheme) => (currentTheme === "dark" ? "light" : "dark"))}
           >
             {theme === "dark" ? <Sun size={18} /> : <Moon size={18} />}
@@ -135,6 +189,15 @@ export default function App() {
         <BreakdownStage />
         <ImageLibrarySidebar />
       </section>
+
+      {busyAction ? (
+        <div className="loading-backdrop" role="alert" aria-live="assertive">
+          <div className="loading-dialog">
+            <span className="loading-spinner" aria-hidden="true" />
+            <p>{BUSY_MESSAGES[busyAction]}</p>
+          </div>
+        </div>
+      ) : null}
 
       {pngPreviewUrl ? (
         <div
@@ -187,4 +250,23 @@ function projectFileName(title: string) {
 
 function pngFileName(title: string) {
   return projectFileName(title).replace(/\.dhbreakdown$/, ".png");
+}
+
+function versionedProjectFileName(fileName: string, version: number) {
+  const cleanName = fileName.trim() || "deck-breakdown.dhbreakdown";
+  const extension = ".dhbreakdown";
+  const baseName = cleanName.toLowerCase().endsWith(extension)
+    ? cleanName.slice(0, -extension.length)
+    : cleanName;
+  const unversionedBaseName = baseName.replace(/_v\d+$/i, "");
+
+  return `${unversionedBaseName}_v${version}${extension}`;
+}
+
+function waitForPaint() {
+  return new Promise<void>((resolve) => {
+    window.requestAnimationFrame(() => {
+      window.requestAnimationFrame(() => resolve());
+    });
+  });
 }
