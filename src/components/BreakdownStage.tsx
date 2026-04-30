@@ -3,6 +3,9 @@ import Konva from "konva";
 import { Circle, Group, Image, Layer, Line, Rect, Stage, Text, Transformer } from "react-konva";
 import {
   DEFAULT_LABEL_DISTANCE,
+  LABEL_BOX_OFFSET_X,
+  LABEL_BOX_OFFSET_Y,
+  LABEL_BOX_WIDTH,
   getSliceGeometries,
   labelPosition,
   traceWedgePath,
@@ -582,12 +585,12 @@ export function BreakdownStage() {
                   fontFamily={labelStyle.fontFamily}
                   fontSize={labelStyle.fontSize}
                   fontStyle="bold"
-                  offsetX={120}
-                  offsetY={32}
+                  offsetX={LABEL_BOX_OFFSET_X}
+                  offsetY={LABEL_BOX_OFFSET_Y}
                   stroke={labelStyle.stroke}
                   strokeWidth={labelStyle.strokeWidth}
                   text={`${geometry.slice.label}\n(${geometry.slice.value})`}
-                  width={240}
+                  width={LABEL_BOX_WIDTH}
                   x={position.x}
                   y={position.y}
                 />

@@ -18,12 +18,42 @@ interface PathContext {
 const toRadians = (degrees: number) => (degrees * Math.PI) / 180;
 export const DEFAULT_LABEL_DISTANCE = 96;
 const MIN_LABEL_STROKE_GAP = 16;
+export const LABEL_BOX_WIDTH = 240;
+export const LABEL_BOX_OFFSET_X = LABEL_BOX_WIDTH / 2;
+export const LABEL_BOX_OFFSET_Y = 32;
+const LABEL_LINE_COUNT = 2;
 
-export function safeLabelDistance(chart: PieChartSettings) {
-  const labelInset =
-    chart.labelStyle.fontSize + chart.labelStyle.strokeWidth + chart.borderWidth / 2;
+export function labelTextHeight(chart: PieChartSettings) {
+  return chart.labelStyle.fontSize * LABEL_LINE_COUNT + chart.labelStyle.strokeWidth * 2;
+}
 
-  return Math.max(DEFAULT_LABEL_DISTANCE, Math.ceil(labelInset + MIN_LABEL_STROKE_GAP));
+export function safeLabelDistanceForAngle(chart: PieChartSettings, angle: number) {
+  const radians = toRadians(angle);
+  const xInward = Math.abs(Math.cos(radians)) * LABEL_BOX_OFFSET_X;
+  const labelHeight = labelTextHeight(chart);
+  const yInward =
+    Math.sin(radians) >= 0
+      ? Math.sin(radians) * LABEL_BOX_OFFSET_Y
+      : Math.abs(Math.sin(radians)) * (labelHeight - LABEL_BOX_OFFSET_Y);
+  const minimumDistance =
+    xInward + yInward + chart.borderWidth / 2 + MIN_LABEL_STROKE_GAP;
+
+  return Math.max(0, Math.ceil(minimumDistance));
+}
+
+export function normalizeLabelDistances(chart: PieChartSettings): ChartSlice[] {
+  const geometries = getSliceGeometries(chart);
+  const safeDistances = new Map(
+    geometries.map((geometry) => [
+      geometry.slice.id,
+      safeLabelDistanceForAngle(chart, geometry.midAngle),
+    ]),
+  );
+
+  return chart.slices.map((slice) => ({
+    ...slice,
+    labelDistance: safeDistances.get(slice.id) ?? DEFAULT_LABEL_DISTANCE,
+  }));
 }
 
 export function getSliceGeometries(chart: PieChartSettings): SliceGeometry[] {

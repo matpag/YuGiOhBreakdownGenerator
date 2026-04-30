@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { defaultDocument } from "../data/defaultProject";
-import { safeLabelDistance } from "../lib/geometry";
+import { normalizeLabelDistances } from "../lib/geometry";
 import type {
   AssetId,
   BreakdownDocument,
@@ -147,15 +147,28 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
       },
     })),
   updatePieChart: (updates) =>
-    set((state) => ({
-      project: {
-        ...state.project,
-        pieChart: {
-          ...state.project.pieChart,
-          ...updates,
+    set((state) => {
+      const pieChart = {
+        ...state.project.pieChart,
+        ...updates,
+      };
+      const labelLayoutChanged =
+        updates.startAngle !== undefined ||
+        updates.borderWidth !== undefined ||
+        updates.labelStyle !== undefined;
+
+      return {
+        project: {
+          ...state.project,
+          pieChart: {
+            ...pieChart,
+            slices: labelLayoutChanged
+              ? normalizeLabelDistances(pieChart)
+              : state.project.pieChart.slices,
+          },
         },
-      },
-    })),
+      };
+    }),
   setSelectedSlice: (sliceId) =>
     set((state) => ({
       project: {
@@ -167,17 +180,28 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
       },
     })),
   updateSlice: (sliceId, updates) =>
-    set((state) => ({
-      project: {
-        ...state.project,
-        pieChart: {
-          ...state.project.pieChart,
-          slices: state.project.pieChart.slices.map((slice) =>
-            slice.id === sliceId ? { ...slice, ...updates } : slice,
-          ),
+    set((state) => {
+      const slices = state.project.pieChart.slices.map((slice) =>
+        slice.id === sliceId ? { ...slice, ...updates } : slice,
+      );
+      const pieChart = {
+        ...state.project.pieChart,
+        slices,
+      };
+
+      return {
+        project: {
+          ...state.project,
+          pieChart: {
+            ...pieChart,
+            slices:
+              updates.value === undefined
+                ? slices
+                : normalizeLabelDistances(pieChart),
+          },
         },
-      },
-    })),
+      };
+    }),
   updateSliceImageTransform: (sliceId, updates) =>
     set((state) => ({
       project: {
@@ -325,40 +349,38 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
       const index = state.project.pieChart.slices.length + 1;
       const id = `slice-${crypto.randomUUID()}`;
       const layerId = `slice-image-${crypto.randomUUID()}`;
-      const minimumLabelDistance = safeLabelDistance(state.project.pieChart);
+      const slices = [
+        ...state.project.pieChart.slices,
+        {
+          id,
+          label: `Deck ${index}`,
+          labelDistance: 0,
+          value: 1,
+          assetId: null,
+          imageTransform: { ...DEFAULT_SLICE_IMAGE_TRANSFORM },
+          imageLayers: [
+            {
+              id: layerId,
+              name: "Image 1",
+              assetId: null,
+              imageTransform: { ...DEFAULT_SLICE_IMAGE_TRANSFORM },
+            },
+          ],
+          selectedImageLayerId: layerId,
+        },
+      ];
+      const pieChart = {
+        ...state.project.pieChart,
+        selectedSliceId: id,
+        slices,
+      };
 
       return {
         project: {
           ...state.project,
           pieChart: {
-            ...state.project.pieChart,
-            selectedSliceId: id,
-            slices: [
-              ...state.project.pieChart.slices.map((slice) => ({
-                ...slice,
-                labelDistance: Math.max(
-                  slice.labelDistance ?? minimumLabelDistance,
-                  minimumLabelDistance,
-                ),
-              })),
-              {
-                id,
-                label: `Deck ${index}`,
-                labelDistance: minimumLabelDistance,
-                value: 1,
-                assetId: null,
-                imageTransform: { ...DEFAULT_SLICE_IMAGE_TRANSFORM },
-                imageLayers: [
-                  {
-                    id: layerId,
-                    name: "Image 1",
-                    assetId: null,
-                    imageTransform: { ...DEFAULT_SLICE_IMAGE_TRANSFORM },
-                  },
-                ],
-                selectedImageLayerId: layerId,
-              },
-            ],
+            ...pieChart,
+            slices: normalizeLabelDistances(pieChart),
           },
         },
       };
@@ -367,14 +389,18 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
     set((state) => {
       const selectedSliceId = state.project.pieChart.selectedSliceId;
       const slices = state.project.pieChart.slices.filter((slice) => slice.id !== selectedSliceId);
+      const pieChart = {
+        ...state.project.pieChart,
+        selectedSliceId: slices[0]?.id ?? null,
+        slices,
+      };
 
       return {
         project: {
           ...state.project,
           pieChart: {
-            ...state.project.pieChart,
-            selectedSliceId: slices[0]?.id ?? null,
-            slices,
+            ...pieChart,
+            slices: normalizeLabelDistances(pieChart),
           },
         },
       };
