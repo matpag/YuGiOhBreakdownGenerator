@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { ArrowDown, ArrowUp, ImagePlus, Minus, Plus, Trash2 } from "lucide-react";
+import { ArrowDown, ArrowUp, ImagePlus, Minus, Plus, RotateCcw, Trash2 } from "lucide-react";
 import { fileToAsset, validateImageFile } from "../lib/assets";
 import {
   FONT_FILE_ACCEPT,
@@ -532,6 +532,15 @@ export function EditorSidebar() {
               }
             />
           </label>
+          {selectedSlice.labelBox ? (
+            <button
+              type="button"
+              onClick={() => updateSlice(selectedSlice.id, { labelBox: undefined })}
+            >
+              <RotateCcw size={16} />
+              Reset label box
+            </button>
+          ) : null}
           <div className="slice-layer-header">
             <h3>Slice Images</h3>
             <button

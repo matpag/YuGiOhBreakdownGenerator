@@ -60,9 +60,17 @@ export interface SliceImageLayer {
   imageTransform: SliceImageTransform;
 }
 
+export interface SliceLabelBox {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
 export interface ChartSlice {
   id: string;
   label: string;
+  labelBox?: SliceLabelBox;
   labelDistance?: number;
   value: number;
   assetId: AssetId | null;

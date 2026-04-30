@@ -3,16 +3,18 @@ import Konva from "konva";
 import { Circle, Group, Image, Layer, Line, Rect, Stage, Text, Transformer } from "react-konva";
 import {
   DEFAULT_LABEL_DISTANCE,
-  LABEL_BOX_OFFSET_X,
-  LABEL_BOX_OFFSET_Y,
-  LABEL_BOX_WIDTH,
+  MIN_LABEL_BOX_HEIGHT,
+  MIN_LABEL_BOX_WIDTH,
+  clampLabelBoxToCanvas,
+  defaultLabelBox,
   getSliceGeometries,
-  labelPosition,
   traceWedgePath,
 } from "../lib/geometry";
 import { useProjectStore } from "../store/projectStore";
 import type {
+  CanvasSettings,
   ChartSlice,
+  PieChartSettings,
   ProjectAsset,
   SliceImageLayer,
   SliceImageTransform,
@@ -95,6 +97,7 @@ interface SliceImageEditorProps {
   radius: number;
   setSelectedSlice: (sliceId: string) => void;
   setSelectedSliceImageLayer: (sliceId: string, layerId: string) => void;
+  clearSelectedLabel: () => void;
   updateSliceImageLayerTransform: (
     sliceId: string,
     layerId: string,
@@ -108,6 +111,7 @@ interface DraftZoomInputProps {
 }
 
 function SliceImageEditor({
+  clearSelectedLabel,
   geometry,
   image,
   isSelected,
@@ -181,6 +185,7 @@ function SliceImageEditor({
   }
 
   function selectLayer() {
+    clearSelectedLabel();
     setSelectedSlice(geometry.slice.id);
     setSelectedSliceImageLayer(geometry.slice.id, layer.id);
   }
@@ -233,6 +238,137 @@ function SliceImageEditor({
           enabledAnchors={["top-left", "top-right", "bottom-left", "bottom-right"]}
           flipEnabled={false}
           keepRatio
+          name={EDITOR_OVERLAY_NAME}
+          rotateEnabled={false}
+        />
+      ) : null}
+    </>
+  );
+}
+
+interface SliceLabelEditorProps {
+  canvas: CanvasSettings;
+  geometry: SliceGeometry;
+  isSelected: boolean;
+  pieChart: PieChartSettings;
+  setSelectedLabelSliceId: (sliceId: string) => void;
+  setSelectedSlice: (sliceId: string) => void;
+  updateSlice: (sliceId: string, updates: Partial<ChartSlice>) => void;
+}
+
+function SliceLabelEditor({
+  canvas,
+  geometry,
+  isSelected,
+  pieChart,
+  setSelectedLabelSliceId,
+  setSelectedSlice,
+  updateSlice,
+}: SliceLabelEditorProps) {
+  const textRef = useRef<Konva.Text>(null);
+  const transformerRef = useRef<Konva.Transformer>(null);
+  const labelStyle = pieChart.labelStyle;
+  const labelBox =
+    geometry.slice.labelBox ??
+    defaultLabelBox(
+      pieChart,
+      canvas,
+      geometry.midAngle,
+      geometry.slice.labelDistance ?? DEFAULT_LABEL_DISTANCE,
+    );
+
+  useEffect(() => {
+    const transformer = transformerRef.current;
+    const textNode = textRef.current;
+
+    if (!transformer) {
+      return;
+    }
+
+    if (isSelected && textNode) {
+      transformer.nodes([textNode]);
+      transformer.moveToTop();
+      transformer.getLayer()?.batchDraw();
+      return;
+    }
+
+    transformer.nodes([]);
+    transformer.getLayer()?.batchDraw();
+  }, [isSelected, labelBox.height, labelBox.width]);
+
+  function selectLabel(event: Konva.KonvaEventObject<MouseEvent | TouchEvent>) {
+    event.cancelBubble = true;
+    setSelectedSlice(geometry.slice.id);
+    setSelectedLabelSliceId(geometry.slice.id);
+  }
+
+  function commitLabelBox(node: Konva.Text) {
+    const nextLabelBox = clampLabelBoxToCanvas(
+      {
+        x: node.x(),
+        y: node.y(),
+        width: node.width() * node.scaleX(),
+        height: node.height() * node.scaleY(),
+      },
+      canvas,
+    );
+
+    node.scale({ x: 1, y: 1 });
+    updateSlice(geometry.slice.id, {
+      labelBox: nextLabelBox,
+    });
+  }
+
+  return (
+    <>
+      <Text
+        ref={textRef}
+        align="center"
+        draggable={isSelected}
+        fill={labelStyle.fill}
+        fontFamily={labelStyle.fontFamily}
+        fontSize={labelStyle.fontSize}
+        fontStyle="bold"
+        height={labelBox.height}
+        onClick={selectLabel}
+        onDragEnd={(event) => commitLabelBox(event.target as Konva.Text)}
+        onTap={selectLabel}
+        onTransformEnd={(event) => commitLabelBox(event.target as Konva.Text)}
+        stroke={labelStyle.stroke}
+        strokeWidth={labelStyle.strokeWidth}
+        text={`${geometry.slice.label}\n(${geometry.slice.value})`}
+        verticalAlign="middle"
+        width={labelBox.width}
+        x={labelBox.x}
+        y={labelBox.y}
+      />
+      {isSelected ? (
+        <Transformer
+          ref={transformerRef}
+          anchorCornerRadius={3}
+          anchorFill="#2f80ed"
+          anchorSize={12}
+          anchorStroke="#ffffff"
+          anchorStrokeWidth={2}
+          borderDash={[8, 6]}
+          borderStroke="#2f80ed"
+          borderStrokeWidth={2}
+          boundBoxFunc={(_oldBox, newBox) => ({
+            ...newBox,
+            height: Math.max(newBox.height, MIN_LABEL_BOX_HEIGHT),
+            width: Math.max(newBox.width, MIN_LABEL_BOX_WIDTH),
+          })}
+          enabledAnchors={[
+            "top-left",
+            "top-center",
+            "top-right",
+            "middle-left",
+            "middle-right",
+            "bottom-left",
+            "bottom-center",
+            "bottom-right",
+          ]}
+          flipEnabled={false}
           name={EDITOR_OVERLAY_NAME}
           rotateEnabled={false}
         />
@@ -325,9 +461,11 @@ export function BreakdownStage() {
   const [viewportSize, setViewportSize] = useState({ width: 900, height: 900 });
   const [zoomMode, setZoomMode] = useState<"fit" | "fixed">("fit");
   const [zoomPercent, setZoomPercent] = useState(100);
+  const [selectedLabelSliceId, setSelectedLabelSliceId] = useState<string | null>(null);
   const project = useProjectStore((state) => state.project);
   const assets = useProjectStore((state) => state.assets);
   const setSelectedSlice = useProjectStore((state) => state.setSelectedSlice);
+  const updateSlice = useProjectStore((state) => state.updateSlice);
   const setSelectedSliceImageLayer = useProjectStore((state) => state.setSelectedSliceImageLayer);
   const updateSliceImageLayerTransform = useProjectStore(
     (state) => state.updateSliceImageLayerTransform,
@@ -373,6 +511,21 @@ export function BreakdownStage() {
     observer.observe(viewport);
     return () => observer.disconnect();
   }, []);
+
+  useEffect(() => {
+    if (
+      selectedLabelSliceId &&
+      (project.pieChart.selectedSliceId !== selectedLabelSliceId ||
+        !project.pieChart.slices.some((slice) => slice.id === selectedLabelSliceId))
+    ) {
+      setSelectedLabelSliceId(null);
+    }
+  }, [project.pieChart.selectedSliceId, project.pieChart.slices, selectedLabelSliceId]);
+
+  function selectSlice(sliceId: string) {
+    setSelectedLabelSliceId(null);
+    setSelectedSlice(sliceId);
+  }
 
   const handleSliceWheel = useCallback(
     (event: Konva.KonvaEventObject<WheelEvent>, slice: ChartSlice) => {
@@ -526,8 +679,8 @@ export function BreakdownStage() {
                     <Line
                       closed
                       fill={HIT_FILL}
-                      onClick={() => setSelectedSlice(geometry.slice.id)}
-                      onTap={() => setSelectedSlice(geometry.slice.id)}
+                      onClick={() => selectSlice(geometry.slice.id)}
+                      onTap={() => selectSlice(geometry.slice.id)}
                       onWheel={(event) => {
                         if (selected) {
                           handleSliceWheel(event, geometry.slice);
@@ -539,10 +692,15 @@ export function BreakdownStage() {
                       <SliceImageEditor
                         geometry={geometry}
                         image={layer.assetId ? assetImages[layer.assetId] ?? null : null}
-                        isSelected={selected && geometry.slice.selectedImageLayerId === layer.id}
+                        isSelected={
+                          selected &&
+                          selectedLabelSliceId !== geometry.slice.id &&
+                          geometry.slice.selectedImageLayerId === layer.id
+                        }
                         key={layer.id}
                         layer={layer}
                         radius={project.pieChart.radius}
+                        clearSelectedLabel={() => setSelectedLabelSliceId(null)}
                         setSelectedSlice={setSelectedSlice}
                         setSelectedSliceImageLayer={setSelectedSliceImageLayer}
                         updateSliceImageLayerTransform={updateSliceImageLayerTransform}
@@ -570,29 +728,16 @@ export function BreakdownStage() {
               })}
             </Group>
             {slices.map((geometry) => {
-              const position = labelPosition(
-                project.pieChart,
-                geometry.midAngle,
-                geometry.slice.labelDistance ?? DEFAULT_LABEL_DISTANCE,
-              );
-              const labelStyle = project.pieChart.labelStyle;
-
               return (
-                <Text
+                <SliceLabelEditor
+                  canvas={project.canvas}
+                  geometry={geometry}
+                  isSelected={selectedLabelSliceId === geometry.slice.id}
                   key={geometry.slice.id}
-                  align="center"
-                  fill={labelStyle.fill}
-                  fontFamily={labelStyle.fontFamily}
-                  fontSize={labelStyle.fontSize}
-                  fontStyle="bold"
-                  offsetX={LABEL_BOX_OFFSET_X}
-                  offsetY={LABEL_BOX_OFFSET_Y}
-                  stroke={labelStyle.stroke}
-                  strokeWidth={labelStyle.strokeWidth}
-                  text={`${geometry.slice.label}\n(${geometry.slice.value})`}
-                  width={LABEL_BOX_WIDTH}
-                  x={position.x}
-                  y={position.y}
+                  pieChart={project.pieChart}
+                  setSelectedLabelSliceId={setSelectedLabelSliceId}
+                  setSelectedSlice={setSelectedSlice}
+                  updateSlice={updateSlice}
                 />
               );
             })}

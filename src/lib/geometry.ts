@@ -1,4 +1,4 @@
-import type { ChartSlice, PieChartSettings } from "../types/project";
+import type { CanvasSettings, ChartSlice, PieChartSettings, SliceLabelBox } from "../types/project";
 
 export interface SliceGeometry {
   slice: ChartSlice;
@@ -21,6 +21,8 @@ const MIN_LABEL_STROKE_GAP = 16;
 export const LABEL_BOX_WIDTH = 240;
 export const LABEL_BOX_OFFSET_X = LABEL_BOX_WIDTH / 2;
 export const LABEL_BOX_OFFSET_Y = 32;
+export const MIN_LABEL_BOX_WIDTH = 72;
+export const MIN_LABEL_BOX_HEIGHT = 40;
 const LABEL_LINE_COUNT = 2;
 
 export function labelTextHeight(chart: PieChartSettings) {
@@ -54,6 +56,38 @@ export function normalizeLabelDistances(chart: PieChartSettings): ChartSlice[] {
     ...slice,
     labelDistance: safeDistances.get(slice.id) ?? DEFAULT_LABEL_DISTANCE,
   }));
+}
+
+export function defaultLabelBox(
+  chart: PieChartSettings,
+  canvas: CanvasSettings,
+  angle: number,
+  labelDistance = DEFAULT_LABEL_DISTANCE,
+): SliceLabelBox {
+  const position = labelPosition(chart, angle, labelDistance);
+  const box = {
+    x: position.x - LABEL_BOX_OFFSET_X,
+    y: position.y - LABEL_BOX_OFFSET_Y,
+    width: LABEL_BOX_WIDTH,
+    height: Math.max(MIN_LABEL_BOX_HEIGHT, Math.ceil(labelTextHeight(chart))),
+  };
+
+  return clampLabelBoxToCanvas(box, canvas);
+}
+
+export function clampLabelBoxToCanvas(
+  labelBox: SliceLabelBox,
+  canvas: CanvasSettings,
+): SliceLabelBox {
+  const width = Math.min(Math.max(labelBox.width, MIN_LABEL_BOX_WIDTH), canvas.width);
+  const height = Math.min(Math.max(labelBox.height, MIN_LABEL_BOX_HEIGHT), canvas.height);
+
+  return {
+    x: Math.min(Math.max(labelBox.x, 0), canvas.width - width),
+    y: Math.min(Math.max(labelBox.y, 0), canvas.height - height),
+    width,
+    height,
+  };
 }
 
 export function getSliceGeometries(chart: PieChartSettings): SliceGeometry[] {

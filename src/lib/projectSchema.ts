@@ -83,10 +83,20 @@ export const sliceImageLayerSchema = z
   })
   .strict();
 
+export const sliceLabelBoxSchema = z
+  .object({
+    x: finiteNumberSchema,
+    y: finiteNumberSchema,
+    width: positiveNumberSchema,
+    height: positiveNumberSchema,
+  })
+  .strict();
+
 export const chartSliceSchema = z
   .object({
     id: z.string().min(1),
     label: z.string(),
+    labelBox: sliceLabelBoxSchema.optional(),
     labelDistance: nonNegativeNumberSchema.default(96),
     value: nonNegativeNumberSchema,
     assetId: nullableAssetIdSchema,
