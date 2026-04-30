@@ -10,12 +10,13 @@ export const defaultDocument: BreakdownDocument = {
     title: {
       text: "3vs3 DECK BREAKDOWN (21P) - 21/01/2026",
       x: 540,
-      y: 55,
-      fontFamily: "Berlin Sans FB",
+      y: 45,
+      fontFamily: "Calibri",
+      fontWeight: "700",
       fontSize: 44,
       fill: "#000000",
       stroke: "#ffffff",
-      strokeWidth: 2,
+      strokeWidth: 3,
     },
     background: {
       assetId: null,
@@ -37,16 +38,17 @@ export const defaultDocument: BreakdownDocument = {
     pieChart: {
       x: 540,
       y: 600,
-      radius: 300,
+      radius: 350,
       startAngle: -90,
       borderColor: "#000000",
-      borderWidth: 8,
+      borderWidth: 6,
       labelStyle: {
-        fontFamily: "Berlin Sans FB",
+        fontFamily: "Calibri",
+        fontWeight: "700",
         fontSize: 40,
         fill: "#000000",
         stroke: "#ffffff",
-        strokeWidth: 2,
+        strokeWidth: 3,
       },
       selectedSliceId: "slice-1",
       slices: [

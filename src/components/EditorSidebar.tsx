@@ -1,5 +1,17 @@
-import { useEffect, useState } from "react";
-import { ArrowDown, ArrowUp, ImagePlus, Minus, Plus, RotateCcw, Trash2 } from "lucide-react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
+import {
+  ArrowDown,
+  ArrowUp,
+  ImagePlus,
+  Minus,
+  PanelLeftClose,
+  PanelLeftOpen,
+  Plus,
+  RotateCcw,
+  Search,
+  Trash2,
+} from "lucide-react";
 import { fileToAsset, validateImageFile } from "../lib/assets";
 import {
   FONT_FILE_ACCEPT,
@@ -27,6 +39,18 @@ const FALLBACK_FONT_OPTIONS = [
   "Verdana",
 ];
 
+const FONT_WEIGHT_OPTIONS = [
+  { label: "Thin", value: "100" },
+  { label: "Extra Light", value: "200" },
+  { label: "Light", value: "300" },
+  { label: "Regular", value: "400" },
+  { label: "Medium", value: "500" },
+  { label: "Semi Bold", value: "600" },
+  { label: "Bold", value: "700" },
+  { label: "Extra Bold", value: "800" },
+  { label: "Black", value: "900" },
+];
+
 interface LocalFontData {
   family: string;
 }
@@ -36,6 +60,26 @@ interface DraftNumberInputProps {
   onCommit: (value: number) => void;
   step?: number;
   value: number;
+}
+
+interface ColorInputProps {
+  onCommit: (value: string) => void;
+  value: string;
+}
+
+interface FontSelectProps {
+  label: string;
+  onChange: (fontFamily: string) => void;
+  onOpen: () => void;
+  options: string[];
+  value: string;
+}
+
+interface FontMenuPosition {
+  left: number;
+  maxHeight: number;
+  top: number;
+  width: number;
 }
 
 declare global {
@@ -76,6 +120,7 @@ export function EditorSidebar() {
       project.pieChart.labelStyle.fontFamily,
     ]),
   );
+  const [collapsed, setCollapsed] = useState(false);
   const [fontAccessRequested, setFontAccessRequested] = useState(false);
   const [imageUploadError, setImageUploadError] = useState<string | null>(null);
 
@@ -193,7 +238,18 @@ export function EditorSidebar() {
     null;
 
   return (
-    <aside className="sidebar">
+    <aside className={`sidebar ${collapsed ? "sidebar-collapsed" : ""}`}>
+      <button
+        className="sidebar-collapse-button"
+        type="button"
+        title={collapsed ? "Open editor sidebar" : "Collapse editor sidebar"}
+        onClick={() => setCollapsed((isCollapsed) => !isCollapsed)}
+      >
+        {collapsed ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={18} />}
+      </button>
+
+      {collapsed ? null : (
+        <>
       <section className="panel">
         <h2>Canvas</h2>
         <div className="field-row">
@@ -225,53 +281,57 @@ export function EditorSidebar() {
           <textarea value={project.title.text} onChange={(event) => setTitle(event.target.value)} />
         </label>
         <div className="field-row">
-          <label>
-            Font
-            <select
+          <div className="field-label">
+            <span>Font</span>
+            <FontSelect
+              label="Font"
               value={project.title.fontFamily}
-              onFocus={loadSystemFonts}
-              onPointerDown={loadSystemFonts}
-              onChange={(event) => updateTitle({ fontFamily: event.target.value })}
+              options={fontOptions}
+              onOpen={loadSystemFonts}
+              onChange={(fontFamily) => updateTitle({ fontFamily })}
+            />
+          </div>
+          <label>
+            Font weight
+            <select
+              value={project.title.fontWeight}
+              onChange={(event) => updateTitle({ fontWeight: event.target.value })}
             >
-              {fontOptions.map((font) => (
-                <option key={font} value={font}>
-                  {font}
+              {FONT_WEIGHT_OPTIONS.map((fontWeight) => (
+                <option key={fontWeight.value} value={fontWeight.value}>
+                  {fontWeight.label}
                 </option>
               ))}
             </select>
           </label>
-          <label>
-            Size
-            <DraftNumberInput
-              min={8}
-              value={project.title.fontSize}
-              onCommit={(fontSize) =>
-                updateTitle({
-                  fontSize,
-                })
-              }
-            />
-          </label>
         </div>
+        <label>
+          Size
+          <DraftNumberInput
+            min={8}
+            value={project.title.fontSize}
+            onCommit={(fontSize) =>
+              updateTitle({
+                fontSize,
+              })
+            }
+          />
+        </label>
         <div className="field-row">
-          <label>
-            Text color
-            <input
-              className="color-input"
-              type="color"
+          <div className="field-label">
+            <span>Text color</span>
+            <ColorInput
               value={project.title.fill}
-              onChange={(event) => updateTitle({ fill: event.target.value })}
+              onCommit={(fill) => updateTitle({ fill })}
             />
-          </label>
-          <label>
-            Stroke color
-            <input
-              className="color-input"
-              type="color"
+          </div>
+          <div className="field-label">
+            <span>Stroke color</span>
+            <ColorInput
               value={project.title.stroke}
-              onChange={(event) => updateTitle({ stroke: event.target.value })}
+              onCommit={(stroke) => updateTitle({ stroke })}
             />
-          </label>
+          </div>
         </div>
         <div className="field-row">
           <label>
@@ -367,90 +427,115 @@ export function EditorSidebar() {
             />
           </label>
         </div>
-        <label>
-          Radius
-          <DraftNumberInput
-            min={80}
-            value={project.pieChart.radius}
-            onCommit={(radius) =>
-              updatePieChart({
-                radius,
-              })
-            }
-          />
-        </label>
         <div className="field-row">
           <label>
-            Label font
-            <select
-              value={project.pieChart.labelStyle.fontFamily}
-              onFocus={loadSystemFonts}
-              onPointerDown={loadSystemFonts}
-              onChange={(event) =>
+            Radius
+            <DraftNumberInput
+              min={80}
+              value={project.pieChart.radius}
+              onCommit={(radius) =>
                 updatePieChart({
-                  labelStyle: {
-                    ...project.pieChart.labelStyle,
-                    fontFamily: event.target.value,
-                  },
+                  radius,
                 })
               }
-            >
-              {fontOptions.map((font) => (
-                <option key={font} value={font}>
-                  {font}
-                </option>
-              ))}
-            </select>
+            />
           </label>
           <label>
-            Label size
+            Chart stroke width
             <DraftNumberInput
-              min={1}
-              value={project.pieChart.labelStyle.fontSize}
-              onCommit={(fontSize) =>
+              min={0}
+              value={project.pieChart.borderWidth}
+              onCommit={(borderWidth) =>
                 updatePieChart({
-                  labelStyle: {
-                    ...project.pieChart.labelStyle,
-                    fontSize,
-                  },
+                  borderWidth,
                 })
               }
             />
           </label>
         </div>
         <div className="field-row">
+          <div className="field-label">
+            <span>Label font</span>
+            <FontSelect
+              label="Label font"
+              value={project.pieChart.labelStyle.fontFamily}
+              options={fontOptions}
+              onOpen={loadSystemFonts}
+              onChange={(fontFamily) =>
+                updatePieChart({
+                  labelStyle: {
+                    ...project.pieChart.labelStyle,
+                    fontFamily,
+                  },
+                })
+              }
+            />
+          </div>
           <label>
-            Label text color
-            <input
-              className="color-input"
-              type="color"
+            Label font weight
+            <select
+              value={project.pieChart.labelStyle.fontWeight}
+              onChange={(event) =>
+                updatePieChart({
+                  labelStyle: {
+                    ...project.pieChart.labelStyle,
+                    fontWeight: event.target.value,
+                  },
+                })
+              }
+            >
+              {FONT_WEIGHT_OPTIONS.map((fontWeight) => (
+                <option key={fontWeight.value} value={fontWeight.value}>
+                  {fontWeight.label}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+        <label>
+          Label size
+          <DraftNumberInput
+            min={1}
+            value={project.pieChart.labelStyle.fontSize}
+            onCommit={(fontSize) =>
+              updatePieChart({
+                labelStyle: {
+                  ...project.pieChart.labelStyle,
+                  fontSize,
+                },
+              })
+            }
+          />
+        </label>
+        <div className="field-row">
+          <div className="field-label">
+            <span>Label text color</span>
+            <ColorInput
               value={project.pieChart.labelStyle.fill}
-              onChange={(event) =>
+              onCommit={(fill) =>
                 updatePieChart({
                   labelStyle: {
                     ...project.pieChart.labelStyle,
-                    fill: event.target.value,
+                    fill,
                   },
                 })
               }
             />
-          </label>
-          <label>
-            Label stroke color
-            <input
-              className="color-input"
-              type="color"
+          </div>
+          <div className="field-label">
+            <span>Label stroke color</span>
+            <ColorInput
               value={project.pieChart.labelStyle.stroke}
-              onChange={(event) =>
+              onCommit={(stroke) =>
                 updatePieChart({
                   labelStyle: {
                     ...project.pieChart.labelStyle,
-                    stroke: event.target.value,
+                    stroke,
                   },
                 })
               }
             />
-          </label>
+          </div>
         </div>
         <label>
           Label stroke width
@@ -674,7 +759,299 @@ export function EditorSidebar() {
           ) : null}
         </section>
       ) : null}
+        </>
+      )}
     </aside>
+  );
+}
+
+function ColorInput({ onCommit, value }: ColorInputProps) {
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    const input = inputRef.current;
+
+    if (!input) {
+      return;
+    }
+
+    input.value = value;
+  }, [value]);
+
+  useEffect(() => {
+    const input = inputRef.current;
+
+    if (!input) {
+      return;
+    }
+
+    const element = input;
+
+    function handleChange() {
+      onCommit(element.value);
+      element.blur();
+    }
+
+    element.addEventListener("change", handleChange);
+
+    return () => {
+      element.removeEventListener("change", handleChange);
+    };
+  }, [onCommit]);
+
+  return (
+    <span className="color-picker-control">
+      <button
+        className="color-picker-button"
+        type="button"
+        title={value}
+        aria-label={`Choose color ${value}`}
+        style={{ backgroundColor: value }}
+        onClick={(event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          inputRef.current?.click();
+        }}
+      />
+      <input ref={inputRef} className="color-input" type="color" defaultValue={value} />
+    </span>
+  );
+}
+
+function FontSelect({ label, onChange, onOpen, options, value }: FontSelectProps) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const skipNextFocusOpenRef = useRef(false);
+  const [isOpen, setIsOpen] = useState(false);
+  const [query, setQuery] = useState(value);
+  const [menuPosition, setMenuPosition] = useState<FontMenuPosition | null>(null);
+  const menuId = `${label.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-menu`;
+  const availableOptions = mergeFontOptions([...options, value]);
+  const normalizedQuery = query.trim().toLowerCase();
+  const filteredOptions = normalizedQuery
+    ? availableOptions.filter((font) => font.toLowerCase().includes(normalizedQuery))
+    : availableOptions;
+
+  useEffect(() => {
+    if (!isOpen) {
+      setQuery(value);
+    }
+  }, [isOpen, value]);
+
+  function updateMenuPosition() {
+    const input = inputRef.current;
+
+    if (!input) {
+      return;
+    }
+
+    const rect = input.getBoundingClientRect();
+    const gap = 4;
+    const viewportMargin = 10;
+    const spaceBelow = window.innerHeight - rect.bottom - viewportMargin;
+    const spaceAbove = rect.top - viewportMargin;
+    const opensAbove = spaceBelow < 220 && spaceAbove > spaceBelow;
+    const availableHeight = Math.max(120, opensAbove ? spaceAbove : spaceBelow);
+    const maxHeight = Math.min(320, availableHeight - gap);
+    const top = opensAbove
+      ? Math.max(viewportMargin, rect.top - maxHeight - gap)
+      : Math.min(rect.bottom + gap, window.innerHeight - maxHeight - viewportMargin);
+    const left = Math.min(
+      Math.max(viewportMargin, rect.left),
+      Math.max(viewportMargin, window.innerWidth - rect.width - viewportMargin),
+    );
+
+    setMenuPosition({
+      left,
+      maxHeight,
+      top,
+      width: rect.width,
+    });
+  }
+
+  function openMenu() {
+    onOpen();
+    setIsOpen(true);
+  }
+
+  function closeMenu() {
+    setIsOpen(false);
+  }
+
+  function focusInputWithoutOpening() {
+    skipNextFocusOpenRef.current = true;
+    inputRef.current?.focus();
+    window.setTimeout(() => {
+      skipNextFocusOpenRef.current = false;
+    }, 0);
+  }
+
+  function selectFont(font: string) {
+    onChange(font);
+    setQuery(font);
+    closeMenu();
+    focusInputWithoutOpening();
+  }
+
+  useLayoutEffect(() => {
+    if (isOpen) {
+      updateMenuPosition();
+    }
+  }, [isOpen, filteredOptions.length]);
+
+  useEffect(() => {
+    if (!isOpen) {
+      return;
+    }
+
+    function handlePointerDown(event: PointerEvent) {
+      const target = event.target as Node;
+
+      if (inputRef.current?.contains(target) || menuRef.current?.contains(target)) {
+        return;
+      }
+
+      closeMenu();
+    }
+
+    window.addEventListener("resize", updateMenuPosition);
+    window.addEventListener("scroll", updateMenuPosition, true);
+    document.addEventListener("pointerdown", handlePointerDown);
+
+    return () => {
+      window.removeEventListener("resize", updateMenuPosition);
+      window.removeEventListener("scroll", updateMenuPosition, true);
+      document.removeEventListener("pointerdown", handlePointerDown);
+    };
+  }, [isOpen]);
+
+  return (
+    <>
+      <div className="font-combobox">
+        <input
+          ref={inputRef}
+          aria-autocomplete="list"
+          aria-controls={isOpen ? menuId : undefined}
+          aria-expanded={isOpen}
+          aria-label={label}
+          className="font-combobox-input"
+          role="combobox"
+          value={isOpen ? query : value}
+          onChange={(event) => {
+            setQuery(event.target.value);
+            openMenu();
+          }}
+          onFocus={() => {
+            if (skipNextFocusOpenRef.current) {
+              return;
+            }
+
+            openMenu();
+          }}
+          onKeyDown={(event) => {
+            if (event.key === "ArrowDown") {
+              event.preventDefault();
+              openMenu();
+              menuRef.current
+                ?.querySelector<HTMLButtonElement>(".font-select-option")
+                ?.focus();
+            }
+
+            if (event.key === "Enter") {
+              const exactMatch = availableOptions.find(
+                (font) => font.toLowerCase() === query.trim().toLowerCase(),
+              );
+              const nextFont = exactMatch ?? filteredOptions[0];
+
+              if (nextFont) {
+                event.preventDefault();
+                selectFont(nextFont);
+              }
+            }
+
+            if (event.key === "Escape") {
+              event.preventDefault();
+              setQuery(value);
+              closeMenu();
+            }
+          }}
+        />
+        <Search aria-hidden="true" className="font-combobox-icon" size={15} />
+      </div>
+      {isOpen && menuPosition
+        ? createPortal(
+            <div
+              ref={menuRef}
+              className="font-select-menu"
+              id={menuId}
+              role="listbox"
+              aria-label={label}
+              style={{
+                left: menuPosition.left,
+                maxHeight: menuPosition.maxHeight,
+                top: menuPosition.top,
+                width: menuPosition.width,
+              }}
+              onKeyDown={(event) => {
+                if (event.key === "Escape") {
+                  event.preventDefault();
+                  setQuery(value);
+                  closeMenu();
+                  focusInputWithoutOpening();
+                }
+
+                if (event.key === "ArrowDown") {
+                  event.preventDefault();
+                  const options = Array.from(
+                    menuRef.current?.querySelectorAll<HTMLButtonElement>(".font-select-option") ??
+                      [],
+                  );
+                  const currentIndex = options.findIndex((option) => option === document.activeElement);
+                  options[Math.min(currentIndex + 1, options.length - 1)]?.focus();
+                }
+
+                if (event.key === "ArrowUp") {
+                  event.preventDefault();
+                  const options = Array.from(
+                    menuRef.current?.querySelectorAll<HTMLButtonElement>(".font-select-option") ??
+                      [],
+                  );
+                  const currentIndex = options.findIndex((option) => option === document.activeElement);
+
+                  if (currentIndex <= 0) {
+                    inputRef.current?.focus();
+                    return;
+                  }
+
+                  options[currentIndex - 1]?.focus();
+                }
+              }}
+            >
+              {filteredOptions.length > 0 ? (
+                filteredOptions.map((font) => (
+                  <button
+                    className={`font-select-option ${
+                      font === value ? "font-select-option-active" : ""
+                    }`}
+                    key={font}
+                    role="option"
+                    aria-selected={font === value}
+                    type="button"
+                    onClick={() => {
+                      selectFont(font);
+                    }}
+                  >
+                    {font}
+                  </button>
+                ))
+              ) : (
+                <div className="font-select-empty">No fonts found</div>
+              )}
+            </div>,
+            document.body,
+          )
+        : null}
+    </>
   );
 }
 

@@ -20,6 +20,7 @@ export const textStyleSchema = z
     x: finiteNumberSchema,
     y: finiteNumberSchema,
     fontFamily: z.string().min(1),
+    fontWeight: z.string().min(1).default("700"),
     fontSize: positiveNumberSchema,
     fill: z.string().min(1),
     stroke: z.string().min(1),
@@ -30,6 +31,7 @@ export const textStyleSchema = z
 export const labelTextStyleSchema = z
   .object({
     fontFamily: z.string().min(1),
+    fontWeight: z.string().min(1).default("700"),
     fontSize: positiveNumberSchema,
     fill: z.string().min(1),
     stroke: z.string().min(1),
@@ -139,6 +141,7 @@ export const pieChartSettingsSchema = z
     borderWidth: nonNegativeNumberSchema,
     labelStyle: labelTextStyleSchema.default({
       fontFamily: "Berlin Sans FB",
+      fontWeight: "700",
       fontSize: 40,
       fill: "#ffffff",
       stroke: "#000000",

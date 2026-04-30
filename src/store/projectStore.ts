@@ -44,6 +44,7 @@ interface ProjectState extends BreakdownDocument {
   addAsset: (asset: ProjectAsset) => AssetId;
   addEmbeddedFont: (font: EmbeddedFont) => void;
   addImageLibraryItem: (item: ImageLibraryItem) => void;
+  renameImageLibraryItem: (itemId: string, name: string) => void;
   removeImageLibraryItem: (itemId: string) => void;
   setBackgroundAsset: (assetId: AssetId) => void;
   setSliceAsset: (sliceId: string, assetId: AssetId) => void;
@@ -65,10 +66,15 @@ function normalizeDocument(document: BreakdownDocument): BreakdownDocument {
       },
       title: {
         ...document.project.title,
+        fontWeight: document.project.title.fontWeight ?? "700",
         x: document.project.canvas.width / 2,
       },
       pieChart: {
         ...document.project.pieChart,
+        labelStyle: {
+          ...document.project.pieChart.labelStyle,
+          fontWeight: document.project.pieChart.labelStyle.fontWeight ?? "700",
+        },
         slices: document.project.pieChart.slices.map(normalizeSlice),
       },
     },
@@ -440,6 +446,23 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
         ],
       },
     })),
+  renameImageLibraryItem: (itemId, name) =>
+    set((state) => {
+      const trimmedName = name.trim();
+
+      if (!trimmedName) {
+        return state;
+      }
+
+      return {
+        project: {
+          ...state.project,
+          imageLibrary: state.project.imageLibrary.map((item) =>
+            item.id === itemId ? { ...item, name: trimmedName } : item,
+          ),
+        },
+      };
+    }),
   removeImageLibraryItem: (itemId) =>
     set((state) => {
       const item = state.project.imageLibrary.find(
