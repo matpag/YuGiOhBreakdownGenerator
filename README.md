@@ -1,76 +1,209 @@
 # Deck Breakdown Maker
 
-Local-only desktop web app for generating Yu-Gi-Oh retroformat deck breakdown graphics from reusable templates.
+Live demo: https://matpag.github.io/YuGiOhBreakdownGenerator/
 
-## Stack
+Deck Breakdown Maker is a browser-based editor for creating Yu-Gi-Oh deck breakdown graphics. It runs locally in your browser, lets you build a reusable project, and exports the final composition as a PNG.
 
-- Vite
-- React
-- TypeScript
-- Konva / react-konva
-- Zustand
-- JSZip
-- Zod
+Use the toolbar at the top to open projects, save projects, preview the exported PNG, export the PNG, and switch theme.
 
-## Branch Workflow
+## Top Toolbar
 
-This repository uses a lightweight branch model:
+### Open Project
 
-- `main`: stable current branch
-- `feature/...` or `codex/...`: focused work branches created from `main`
-- Open pull requests from feature branches into `main`
-- Run `npm run build` and the relevant manual QA before merging
-- Delete merged feature branches when they are no longer needed
+Use the folder button to load a saved `.dhbreakdown` file. The project file restores the canvas settings, title, chart, slices, uploaded images, image library, and embedded fonts.
 
-## Local Setup
+### Save Project
 
-```bash
-npm install
-npm run dev
-```
+Use the archive button to download the current project as a `.dhbreakdown` file. Save this when you want to continue editing later.
+
+### Preview PNG
+
+Use the eye button to open a dialog showing the exact PNG render that will be exported. Editor-only outlines, handles, and selection overlays are hidden in the preview.
+
+The preview dialog includes:
+
+- Download button: downloads the previewed PNG.
+- Close button: closes the dialog.
+- Backdrop click or `Esc`: closes the dialog.
+
+### Export PNG
+
+Use the download button to export the final image directly as a PNG. The export uses the original canvas size, not the current zoom level.
+
+### Theme
+
+Use the Light/Dark button to switch the editor theme. This only affects the editor interface, not the exported image.
+
+## Preview Area
+
+The center panel shows the editable canvas.
+
+### Zoom Controls
+
+Use the zoom toolbar to change how the canvas is displayed while editing:
+
+- `Fill`: fits the canvas into the available preview area.
+- Preset percentages: switch to a fixed zoom level.
+- Custom zoom input: type a custom zoom percentage.
+
+Zoom only changes the editor view. It does not change the exported PNG dimensions.
+
+### Selecting Slices
+
+Click a pie slice to select it. The selected slice gets a red outline in the editor only.
+
+### Selecting Labels
+
+Click a slice label to select and edit its text box. Selection handles are editor-only and are hidden from preview/export.
+
+### Moving Slice Images
+
+Click a slice image layer to select it. Drag the image to reposition it. When selected, the image can be dragged from its full transform rectangle, even when part of that rectangle extends outside the slice.
+
+Clicking another slice through the selected image bounds still selects the slice underneath.
+
+### Resizing Slice Images
+
+Use the selected image handles to resize the image while preserving its ratio. You can also use the mouse wheel over the selected slice/image to zoom the active slice image layer.
+
+## Left Editor Panel
+
+The left panel controls the canvas, title, static images, embedded fonts, chart, slices, and selected slice details. Use the collapse button at the top to hide or show this panel.
+
+### Canvas
+
+Set the output canvas width and height. These values define the final PNG dimensions.
+
+### Title
+
+Edit the title shown at the top of the canvas.
+
+Title controls:
+
+- Text: changes the title content.
+- Font: chooses a system or embedded font.
+- Font weight: sets the title weight.
+- Size: changes the title font size.
+- Text color: sets the title fill color.
+- Stroke color: sets the title outline color.
+- Stroke width: sets the title outline thickness.
+- Y: moves the title vertically.
+
+### Static Images
+
+Upload a background image. The background fills the canvas.
+
+Uploaded images are also added to the image library so they can be reused later.
+
+### Embedded Fonts
+
+Upload `.ttf`, `.otf`, `.woff`, or `.woff2` font files. Embedded fonts are saved inside the project file and become available in the title and label font controls.
+
+### Chart
+
+Control the pie chart layout and label style.
+
+Chart controls:
+
+- X: horizontal chart position.
+- Y: vertical chart position.
+- Radius: chart size.
+- Chart stroke width: outline thickness around slices.
+- Label font: font used by slice labels.
+- Label font weight: label text weight.
+- Label size: label font size.
+- Label text color: label fill color.
+- Label stroke color: label outline color.
+- Label stroke width: label outline thickness.
+
+### Slices
+
+Use this section to manage chart slices.
+
+Slice controls:
+
+- Add: creates a new slice.
+- Remove: removes the selected slice.
+- Slice list: selects a slice and shows its current value.
+
+Slice values determine the relative size of each pie wedge.
+
+### Selected Slice
+
+This section appears when a slice is selected.
+
+Selected slice controls:
+
+- Label: changes the slice label text.
+- Slice value: changes the slice's chart weight.
+- Label distance: controls the default label placement distance from the chart.
+- Reset label box: removes a manually moved/resized label box and returns it to automatic placement.
+
+### Slice Images
+
+Each slice can contain multiple image layers.
+
+Layer controls:
+
+- Add image: creates another image layer for the selected slice.
+- Layer row: selects an image layer.
+- Upload: assigns an uploaded image to that layer.
+- Move down/up: changes layer order.
+- Remove: deletes the layer when more than one layer exists.
+
+Selected image layer controls:
+
+- Scale: changes image scale.
+- Rotation: changes image rotation.
+- X: moves the image horizontally within the chart coordinate space.
+- Y: moves the image vertically within the chart coordinate space.
+
+## Right Image Library Panel
+
+The right panel stores uploaded images for reuse. Use the collapse button at the top to hide or show this panel.
+
+### Upload Images
+
+Upload one or more image files into the library. Library images are saved with the project.
+
+### Search
+
+Use the search field to filter images by library name or original filename.
+
+### Rename
+
+Use the pencil button on an image card to rename a library item.
+
+### Use as Background
+
+Use the background button on an image card to apply that image as the canvas background.
+
+### Use in Slice
+
+Use the slice button on an image card to assign that image to the currently selected slice image layer.
+
+### Remove
+
+Use the trash button to remove a library item. If an asset is still used by the project, the library item can be removed while the underlying asset remains available to the existing reference.
 
 ## Project Files
 
-Breakdown projects use a ZIP-based `.dhbreakdown` file:
+Projects are saved as `.dhbreakdown` files. A project file contains:
 
-```txt
-manifest.json
-assets/
-  <asset-id>.png
-  <asset-id>.webp
-```
+- Canvas settings
+- Title settings
+- Background image reference
+- Chart geometry
+- Slice labels and values
+- Slice image layers and transforms
+- Image library entries
+- Embedded fonts
+- Uploaded asset files
 
-The manifest is JSON with `format: "dhbreakdown"` and `version: 1`. It stores the project canvas, title, background asset references, chart geometry, slice values, labels, per-slice image layers and transforms, and an asset table. Asset table entries keep the in-app asset id, original filename, MIME type, and ZIP path; the asset bytes live under `assets/*` and are restored to in-memory `dataUrl`s on import.
+Use project files when you want to keep editing later or reuse a breakdown template.
 
-## MVP Workflow
+## Export Notes
 
-1. Create or open a project.
-2. Upload a background.
-3. Edit title text.
-4. Add chart slices and set values.
-5. Upload an image for each slice.
-6. Export the final PNG at the original canvas size.
+Preview and Export use the same render path. Both hide editor-only overlays before rendering.
 
-## Embedded Fonts
-
-Font files can be uploaded into a project from the Embedded Fonts panel. Uploaded `.ttf`, `.otf`, `.woff`, and `.woff2` files are saved inside the `.dhbreakdown` archive under `fonts/`, registered with the browser through `FontFace`, and become available in the title and pie-label font dropdowns after the project is loaded.
-
-## Starter Layout
-
-The default project starts at `1600x1600`, matching the provided breakdown images. The title is centered near the top, and the chart is centered lower on the canvas at `x: 800`, `y: 900`, with a `540px` radius.
-
-## Manual QA
-
-- Run `npm run dev` and confirm the editor opens without a backend.
-- Upload a background, then verify it renders on the canvas.
-- Add, remove, select, and edit slices; slice values should change wedge sizes.
-- Upload a slice image and adjust its scale, rotation, X, and Y controls.
-- Save a `.dhbreakdown`, reload it with Open, and confirm images and edits return.
-- Export PNG and confirm the downloaded image is `1600x1600`.
-
-## Future Improvements
-
-- Named templates for Tengu, GOAT, Edison, and other recurring formats.
-- Drag handles for title, chart, and label positioning.
-- Better image-fit presets per slice.
-- Optional font loading for a closer match to the sample outlined title style.
+The exported PNG uses the canvas dimensions configured in the Canvas section, regardless of editor zoom.
