@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Download, FileArchive, FolderOpen, Moon, Sun } from "lucide-react";
+import { Download, Eye, FileArchive, FolderOpen, Moon, Sun, X } from "lucide-react";
 import { BreakdownStage } from "./components/BreakdownStage";
 import { EditorSidebar } from "./components/EditorSidebar";
 import { ImageLibrarySidebar } from "./components/ImageLibrarySidebar";
@@ -11,6 +11,7 @@ type Theme = "light" | "dark";
 
 export default function App() {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [pngPreviewUrl, setPngPreviewUrl] = useState<string | null>(null);
   const [theme, setTheme] = useState<Theme>(() =>
     window.localStorage.getItem("deck-breakdown-maker-theme") === "dark" ? "dark" : "light",
   );
@@ -27,6 +28,32 @@ export default function App() {
     document.documentElement.dataset.theme = theme;
     window.localStorage.setItem("deck-breakdown-maker-theme", theme);
   }, [theme]);
+
+  useEffect(() => {
+    function handlePreviewReady(event: Event) {
+      const previewEvent = event as CustomEvent<{ dataUrl: string }>;
+      setPngPreviewUrl(previewEvent.detail.dataUrl);
+    }
+
+    window.addEventListener("deck-breakdown-maker:png-preview-ready", handlePreviewReady);
+    return () =>
+      window.removeEventListener("deck-breakdown-maker:png-preview-ready", handlePreviewReady);
+  }, []);
+
+  useEffect(() => {
+    if (!pngPreviewUrl) {
+      return;
+    }
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setPngPreviewUrl(null);
+      }
+    }
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [pngPreviewUrl]);
 
   async function handleSaveProject() {
     const blob = await exportBreakdownDocument({ project, assets });
@@ -46,12 +73,26 @@ export default function App() {
     loadDocument(document);
   }
 
+  function previewPng() {
+    window.dispatchEvent(new CustomEvent("deck-breakdown-maker:preview-png"));
+  }
+
+  function downloadPreviewPng() {
+    if (!pngPreviewUrl) {
+      return;
+    }
+
+    const link = document.createElement("a");
+    link.download = pngFileName(project.title.text);
+    link.href = pngPreviewUrl;
+    link.click();
+  }
+
   return (
     <main className="app-shell">
       <header className="topbar">
         <div>
           <h1>Deck Breakdown Maker</h1>
-          <p>{project.title.text}</p>
         </div>
         <div className="topbar-actions">
           <input
@@ -69,6 +110,9 @@ export default function App() {
           </button>
           <button type="button" title="Save project" onClick={handleSaveProject}>
             <FileArchive size={18} />
+          </button>
+          <button type="button" title="Preview PNG" onClick={previewPng}>
+            <Eye size={18} />
           </button>
           <button type="button" title="Export PNG" onClick={exportPng}>
             <Download size={18} />
@@ -91,6 +135,40 @@ export default function App() {
         <BreakdownStage />
         <ImageLibrarySidebar />
       </section>
+
+      {pngPreviewUrl ? (
+        <div
+          className="dialog-backdrop"
+          role="presentation"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) {
+              setPngPreviewUrl(null);
+            }
+          }}
+        >
+          <section
+            className="png-preview-dialog"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="png-preview-title"
+          >
+            <header className="png-preview-header">
+              <h2 id="png-preview-title">PNG preview</h2>
+              <div className="dialog-actions">
+                <button type="button" title="Download PNG" onClick={downloadPreviewPng}>
+                  <Download size={17} />
+                </button>
+                <button type="button" title="Close preview" onClick={() => setPngPreviewUrl(null)}>
+                  <X size={17} />
+                </button>
+              </div>
+            </header>
+            <div className="png-preview-body">
+              <img src={pngPreviewUrl} alt="PNG export preview" />
+            </div>
+          </section>
+        </div>
+      ) : null}
     </main>
   );
 }
@@ -105,4 +183,8 @@ function projectFileName(title: string) {
       .slice(0, 80) || "deck-breakdown";
 
   return `${slug}.dhbreakdown`;
+}
+
+function pngFileName(title: string) {
+  return projectFileName(title).replace(/\.dhbreakdown$/, ".png");
 }

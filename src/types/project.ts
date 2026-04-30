@@ -75,10 +75,8 @@ export interface ChartSlice {
   labelBox?: SliceLabelBox;
   labelDistance?: number;
   value: number;
-  assetId: AssetId | null;
-  imageTransform: SliceImageTransform;
   imageLayers: SliceImageLayer[];
-  selectedImageLayerId: string | null;
+  selectedImageLayerId: string;
 }
 
 export interface PieChartSettings {
@@ -98,7 +96,6 @@ export interface BreakdownProject {
   canvas: CanvasSettings;
   title: TextStyle;
   background: ImageLayer;
-  logo: ImageLayer;
   fonts: EmbeddedFont[];
   imageLibrary: ImageLibraryItem[];
   pieChart: PieChartSettings;

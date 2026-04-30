@@ -557,6 +557,54 @@ textarea {
   width: 100%;
 }
 
+.png-preview-dialog {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 18px 45px var(--shadow);
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  max-height: calc(100vh - 48px);
+  max-width: calc(100vw - 48px);
+  min-height: 0;
+  overflow: hidden;
+  width: min(920px, calc(100vw - 48px));
+}
+
+.png-preview-header {
+  align-items: center;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  justify-content: space-between;
+  padding: 12px 14px;
+}
+
+.png-preview-header h2 {
+  color: var(--text);
+  font-size: 15px;
+  margin: 0;
+}
+
+.png-preview-body {
+  background: var(--stage-frame);
+  display: grid;
+  min-height: 0;
+  overflow: auto;
+  padding: 18px;
+  place-items: center;
+}
+
+.png-preview-body img {
+  background: var(--surface);
+  box-shadow: 0 12px 30px var(--shadow);
+  display: block;
+  height: auto;
+  max-height: calc(100vh - 156px);
+  max-width: 100%;
+  object-fit: contain;
+  width: auto;
+}
+
 .dialog-actions {
   display: flex;
   gap: 8px;

@@ -674,11 +674,11 @@ export function BreakdownStage() {
   );
 
   useEffect(() => {
-    function handleExport() {
+    function renderPng() {
       const stage = stageRef.current;
 
       if (!stage) {
-        return;
+        return null;
       }
 
       const editorOverlays = stage.find(`.${EDITOR_OVERLAY_NAME}`);
@@ -693,14 +693,43 @@ export function BreakdownStage() {
       editorOverlays.forEach((node) => node.show());
       stage.draw();
 
+      return dataUrl;
+    }
+
+    function handleExport() {
+      const dataUrl = renderPng();
+
+      if (!dataUrl) {
+        return;
+      }
+
       const link = document.createElement("a");
       link.download = "deck-breakdown.png";
       link.href = dataUrl;
       link.click();
     }
 
+    function handlePreview() {
+      const dataUrl = renderPng();
+
+      if (!dataUrl) {
+        return;
+      }
+
+      window.dispatchEvent(
+        new CustomEvent("deck-breakdown-maker:png-preview-ready", {
+          detail: { dataUrl },
+        }),
+      );
+    }
+
     window.addEventListener("deck-breakdown-maker:export-png", handleExport);
-    return () => window.removeEventListener("deck-breakdown-maker:export-png", handleExport);
+    window.addEventListener("deck-breakdown-maker:preview-png", handlePreview);
+
+    return () => {
+      window.removeEventListener("deck-breakdown-maker:export-png", handleExport);
+      window.removeEventListener("deck-breakdown-maker:preview-png", handlePreview);
+    };
   }, [previewScale]);
 
   return (

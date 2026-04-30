@@ -20,7 +20,7 @@ export const textStyleSchema = z
     x: finiteNumberSchema,
     y: finiteNumberSchema,
     fontFamily: z.string().min(1),
-    fontWeight: z.string().min(1).default("700"),
+    fontWeight: z.string().min(1),
     fontSize: positiveNumberSchema,
     fill: z.string().min(1),
     stroke: z.string().min(1),
@@ -31,7 +31,7 @@ export const textStyleSchema = z
 export const labelTextStyleSchema = z
   .object({
     fontFamily: z.string().min(1),
-    fontWeight: z.string().min(1).default("700"),
+    fontWeight: z.string().min(1),
     fontSize: positiveNumberSchema,
     fill: z.string().min(1),
     stroke: z.string().min(1),
@@ -99,12 +99,10 @@ export const chartSliceSchema = z
     id: z.string().min(1),
     label: z.string(),
     labelBox: sliceLabelBoxSchema.optional(),
-    labelDistance: nonNegativeNumberSchema.default(96),
+    labelDistance: nonNegativeNumberSchema.optional(),
     value: nonNegativeNumberSchema,
-    assetId: nullableAssetIdSchema,
-    imageTransform: sliceImageTransformSchema,
-    imageLayers: z.array(sliceImageLayerSchema).default([]),
-    selectedImageLayerId: z.string().min(1).nullable().default(null),
+    imageLayers: z.array(sliceImageLayerSchema).min(1),
+    selectedImageLayerId: z.string().min(1),
   })
   .strict()
   .superRefine((slice, context) => {
@@ -122,7 +120,7 @@ export const chartSliceSchema = z
       layerIds.add(layer.id);
     }
 
-    if (slice.selectedImageLayerId !== null && !layerIds.has(slice.selectedImageLayerId)) {
+    if (!layerIds.has(slice.selectedImageLayerId)) {
       context.addIssue({
         code: z.ZodIssueCode.custom,
         message: `Selected image layer "${slice.selectedImageLayerId}" does not exist.`,
@@ -139,14 +137,7 @@ export const pieChartSettingsSchema = z
     startAngle: finiteNumberSchema,
     borderColor: z.string().min(1),
     borderWidth: nonNegativeNumberSchema,
-    labelStyle: labelTextStyleSchema.default({
-      fontFamily: "Berlin Sans FB",
-      fontWeight: "700",
-      fontSize: 40,
-      fill: "#ffffff",
-      stroke: "#000000",
-      strokeWidth: 8,
-    }),
+    labelStyle: labelTextStyleSchema,
     selectedSliceId: z.string().min(1).nullable(),
     slices: z.array(chartSliceSchema),
   })
@@ -181,9 +172,8 @@ export const breakdownProjectSchema = z
     canvas: canvasSettingsSchema,
     title: textStyleSchema,
     background: imageLayerSchema,
-    logo: imageLayerSchema,
-    fonts: z.array(embeddedFontSchema).default([]),
-    imageLibrary: z.array(imageLibraryItemSchema).default([]),
+    fonts: z.array(embeddedFontSchema),
+    imageLibrary: z.array(imageLibraryItemSchema),
     pieChart: pieChartSettingsSchema,
   })
   .strict();
@@ -207,10 +197,8 @@ export const breakdownDocumentSchema = z
     const assetIds = new Set(Object.keys(document.assets));
     const referencedAssetIds = [
       document.project.background.assetId,
-      document.project.logo.assetId,
       ...document.project.fonts.map((font) => font.assetId),
       ...document.project.imageLibrary.map((item) => item.assetId),
-      ...document.project.pieChart.slices.map((slice) => slice.assetId),
       ...document.project.pieChart.slices.flatMap((slice) =>
         slice.imageLayers.map((layer) => layer.assetId),
       ),

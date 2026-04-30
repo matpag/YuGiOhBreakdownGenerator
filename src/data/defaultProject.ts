@@ -26,13 +26,6 @@ export const defaultDocument: BreakdownDocument = {
       height: 1080,
       fit: "cover",
     },
-    logo: {
-      assetId: null,
-      x: 1330,
-      y: 1360,
-      width: 210,
-      fit: "contain",
-    },
     fonts: [],
     imageLibrary: [],
     pieChart: {
@@ -56,8 +49,6 @@ export const defaultDocument: BreakdownDocument = {
           id: "slice-1",
           label: "Chaos Turbo",
           value: 2,
-          assetId: null,
-          imageTransform: { x: 0, y: 0, scale: 1, rotation: 0 },
           imageLayers: [
             {
               id: "slice-1-image-1",
@@ -72,8 +63,6 @@ export const defaultDocument: BreakdownDocument = {
           id: "slice-2",
           label: "Burn",
           value: 2,
-          assetId: null,
-          imageTransform: { x: 0, y: 0, scale: 1, rotation: 0 },
           imageLayers: [
             {
               id: "slice-2-image-1",
@@ -88,8 +77,6 @@ export const defaultDocument: BreakdownDocument = {
           id: "slice-3",
           label: "Warrior",
           value: 1,
-          assetId: null,
-          imageTransform: { x: 0, y: 0, scale: 1, rotation: 0 },
           imageLayers: [
             {
               id: "slice-3-image-1",
@@ -104,8 +91,6 @@ export const defaultDocument: BreakdownDocument = {
           id: "slice-4",
           label: "Control",
           value: 1,
-          assetId: null,
-          imageTransform: { x: 0, y: 0, scale: 1, rotation: 0 },
           imageLayers: [
             {
               id: "slice-4-image-1",
@@ -120,8 +105,6 @@ export const defaultDocument: BreakdownDocument = {
           id: "slice-5",
           label: "Aggro",
           value: 1,
-          assetId: null,
-          imageTransform: { x: 0, y: 0, scale: 1, rotation: 0 },
           imageLayers: [
             {
               id: "slice-5-image-1",
