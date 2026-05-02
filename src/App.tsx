@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Download, Eye, FileArchive, FolderOpen, Moon, Sun, X } from "lucide-react";
+import { Download, Eye, FolderOpen, Moon, Save, Sun, X } from "lucide-react";
 import { BreakdownStage } from "./components/BreakdownStage";
 import { EditorSidebar } from "./components/EditorSidebar";
 import { ImageLibrarySidebar } from "./components/ImageLibrarySidebar";
@@ -157,7 +157,7 @@ export default function App() {
             disabled={busyAction !== null}
             onClick={handleSaveProject}
           >
-            <FileArchive size={18} />
+            <Save size={18} />
           </button>
           <button
             type="button"
