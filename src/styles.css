@@ -701,6 +701,7 @@ textarea {
 }
 
 .canvas-wrap {
+  background: #2f3033;
   display: grid;
   min-height: 0;
   min-width: 0;

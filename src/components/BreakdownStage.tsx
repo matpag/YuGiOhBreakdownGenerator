@@ -791,7 +791,7 @@ export function BreakdownStage() {
             scaleY={previewScale}
           >
           <Layer>
-            <Rect width={project.canvas.width} height={project.canvas.height} fill="#202536" />
+            <Rect width={project.canvas.width} height={project.canvas.height} fill="#ffffff" />
             {backgroundImage ? (
               <Image
                 image={backgroundImage}
