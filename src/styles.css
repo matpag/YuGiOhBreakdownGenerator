@@ -663,7 +663,7 @@ textarea {
   min-width: 0;
   overflow: auto;
   padding: 28px;
-  place-items: start center;
+  place-items: center;
 }
 
 .stage-shell {

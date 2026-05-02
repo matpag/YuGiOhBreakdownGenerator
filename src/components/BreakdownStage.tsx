@@ -28,7 +28,6 @@ const MIN_IMAGE_SCALE = 0.01;
 const ZOOM_FACTOR = 1.08;
 const EDITOR_OVERLAY_NAME = "editor-overlay";
 const ZOOM_PRESETS = [25, 50, 75, 100, 150, 200];
-const CANVAS_PADDING = 56;
 const OUTER_TEXT_STROKE_MULTIPLIER = 2;
 
 function clamp(value: number, min: number, max: number) {
@@ -566,9 +565,9 @@ export function BreakdownStage() {
   const updateSliceImageLayerTransform = useProjectStore(
     (state) => state.updateSliceImageLayerTransform,
   );
-  const fitScale = Math.min(
-    Math.max((viewportSize.width - CANVAS_PADDING) / project.canvas.width, 0.05),
-    Math.max((viewportSize.height - CANVAS_PADDING) / project.canvas.height, 0.05),
+  const fitScale = Math.max(
+    Math.min(viewportSize.width / project.canvas.width, viewportSize.height / project.canvas.height),
+    0.05,
   );
   const previewScale = zoomMode === "fit" ? fitScale : zoomPercent / 100;
   const previewWidth = Math.round(project.canvas.width * previewScale);
@@ -597,14 +596,28 @@ export function BreakdownStage() {
       return;
     }
 
-    const observer = new ResizeObserver(([entry]) => {
+    const viewportElement = viewport;
+
+    function updateViewportSize() {
+      const style = window.getComputedStyle(viewportElement);
+      const horizontalPadding =
+        Number.parseFloat(style.paddingLeft) + Number.parseFloat(style.paddingRight);
+      const verticalPadding =
+        Number.parseFloat(style.paddingTop) + Number.parseFloat(style.paddingBottom);
+
       setViewportSize({
-        width: entry.contentRect.width,
-        height: entry.contentRect.height,
+        width: Math.max(viewportElement.clientWidth - horizontalPadding, 1),
+        height: Math.max(viewportElement.clientHeight - verticalPadding, 1),
       });
+    }
+
+    const observer = new ResizeObserver(() => {
+      updateViewportSize();
     });
 
-    observer.observe(viewport);
+    observer.observe(viewportElement);
+    updateViewportSize();
+
     return () => observer.disconnect();
   }, []);
 
