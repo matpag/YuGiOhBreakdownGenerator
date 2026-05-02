@@ -4,7 +4,7 @@ Live demo: https://matpag.github.io/YuGiOhBreakdownGenerator/
 
 Deck Breakdown Maker is a browser-based editor for creating Yu-Gi-Oh deck breakdown graphics. It runs locally in your browser, lets you build a reusable project, and exports the final composition as a PNG.
 
-Use the toolbar at the top to open projects, save projects, preview the exported PNG, export the PNG, and switch theme.
+Use the toolbar at the top to open projects, save projects, save copies, preview the exported PNG, export the PNG, and switch theme.
 
 ## Top Toolbar
 
@@ -12,9 +12,19 @@ Use the toolbar at the top to open projects, save projects, preview the exported
 
 Use the folder button to load a saved `.dhbreakdown` file. The project file restores the canvas settings, title, chart, slices, uploaded images, image library, and embedded fonts.
 
+In Chrome and Edge, the app remembers the opened local file so Save can write back to it directly.
+
 ### Save Project
 
-Use the archive button to download the current project as a `.dhbreakdown` file. Save this when you want to continue editing later.
+Use the floppy disk button to save the current project.
+
+In Chrome and Edge, if the project was opened through the app's file picker, Save overwrites the same local `.dhbreakdown` file. If direct overwrite is not available, the app downloads a new copy instead.
+
+### Save Project As
+
+Use the Save As button to choose a new destination or filename for the current project.
+
+In browsers that do not support direct file writing, Save As downloads a new `.dhbreakdown` copy.
 
 ### Preview PNG
 

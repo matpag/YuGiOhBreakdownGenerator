@@ -1,28 +1,48 @@
 import { useEffect, useRef, useState } from "react";
-import { Download, Eye, FolderOpen, Moon, Save, Sun, X } from "lucide-react";
+import { Download, Eye, FolderOpen, Moon, Save, SaveAll, Sun, X } from "lucide-react";
 import { BreakdownStage } from "./components/BreakdownStage";
 import { EditorSidebar } from "./components/EditorSidebar";
 import { ImageLibrarySidebar } from "./components/ImageLibrarySidebar";
 import { registerEmbeddedFonts } from "./lib/fonts";
-import { exportBreakdownDocument, importBreakdownDocument } from "./lib/projectArchive";
+import {
+  BREAKDOWN_ARCHIVE_MIME_TYPE,
+  exportBreakdownDocument,
+  importBreakdownDocument,
+} from "./lib/projectArchive";
 import { useProjectStore } from "./store/projectStore";
 
 type Theme = "light" | "dark";
 type BusyAction = "opening" | "saving";
+type Notice = {
+  id: number;
+  message: string;
+};
 
 const BUSY_MESSAGES: Record<BusyAction, string> = {
   opening: "Opening project...",
   saving: "Saving project...",
 };
+const PROJECT_FILE_EXTENSION = ".dhbreakdown";
+const PROJECT_FILE_PICKER_TYPES = [
+  {
+    description: "Deck Breakdown project",
+    accept: {
+      [BREAKDOWN_ARCHIVE_MIME_TYPE]: [PROJECT_FILE_EXTENSION],
+      "application/zip": [PROJECT_FILE_EXTENSION],
+    },
+  },
+];
 
 export default function App() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [busyAction, setBusyAction] = useState<BusyAction | null>(null);
+  const [fileHandle, setFileHandle] = useState<FileSystemFileHandle | null>(null);
+  const [notice, setNotice] = useState<Notice | null>(null);
   const [openedProjectFileName, setOpenedProjectFileName] = useState<string | null>(null);
   const [pngPreviewUrl, setPngPreviewUrl] = useState<string | null>(null);
   const [saveVersion, setSaveVersion] = useState(1);
   const [theme, setTheme] = useState<Theme>(() =>
-    window.localStorage.getItem("deck-breakdown-maker-theme") === "dark" ? "dark" : "light",
+    window.localStorage.getItem("deck-breakdown-maker-theme") === "light" ? "light" : "dark",
   );
   const project = useProjectStore((state) => state.project);
   const assets = useProjectStore((state) => state.assets);
@@ -64,6 +84,19 @@ export default function App() {
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, [pngPreviewUrl]);
 
+  useEffect(() => {
+    if (!notice) {
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => setNotice(null), 4200);
+    return () => window.clearTimeout(timeoutId);
+  }, [notice]);
+
+  function showNotice(message: string) {
+    setNotice({ id: Date.now(), message });
+  }
+
   async function handleSaveProject() {
     setBusyAction("saving");
 
@@ -71,20 +104,72 @@ export default function App() {
       await waitForPaint();
 
       const blob = await exportBreakdownDocument({ project, assets });
-      const downloadName = openedProjectFileName
-        ? versionedProjectFileName(openedProjectFileName, saveVersion)
-        : projectFileName(project.title.text);
-      const link = document.createElement("a");
-      link.download = downloadName;
-      link.href = URL.createObjectURL(blob);
-      link.click();
-      URL.revokeObjectURL(link.href);
 
-      if (openedProjectFileName) {
-        setSaveVersion((currentVersion) => currentVersion + 1);
+      if (fileHandle) {
+        await writeProjectFile(fileHandle, blob);
+        return;
       }
+
+      await saveProjectAs(blob);
     } catch (error) {
+      if (isAbortError(error)) {
+        return;
+      }
+
       window.alert(error instanceof Error ? error.message : "Could not save the project.");
+    } finally {
+      setBusyAction(null);
+    }
+  }
+
+  async function handleSaveProjectAs() {
+    setBusyAction("saving");
+
+    try {
+      await waitForPaint();
+
+      const blob = await exportBreakdownDocument({ project, assets });
+      await saveProjectAs(blob);
+    } catch (error) {
+      if (isAbortError(error)) {
+        return;
+      }
+
+      window.alert(error instanceof Error ? error.message : "Could not save the project.");
+    } finally {
+      setBusyAction(null);
+    }
+  }
+
+  async function handleOpenProjectPicker() {
+    if (!supportsFileSystemAccess()) {
+      fileInputRef.current?.click();
+      return;
+    }
+
+    setBusyAction("opening");
+
+    try {
+      await waitForPaint();
+
+      const [handle] = await window.showOpenFilePicker!({
+        excludeAcceptAllOption: false,
+        multiple: false,
+        types: PROJECT_FILE_PICKER_TYPES,
+      });
+
+      if (!handle) {
+        return;
+      }
+
+      const file = await handle.getFile();
+      await openProjectFile(file, handle);
+    } catch (error) {
+      if (isAbortError(error)) {
+        return;
+      }
+
+      window.alert(error instanceof Error ? error.message : "Could not open the project.");
     } finally {
       setBusyAction(null);
     }
@@ -100,14 +185,55 @@ export default function App() {
     try {
       await waitForPaint();
 
-      const document = await importBreakdownDocument(await file.arrayBuffer());
-      loadDocument(document);
-      setOpenedProjectFileName(file.name);
-      setSaveVersion(1);
+      await openProjectFile(file, null);
     } catch (error) {
       window.alert(error instanceof Error ? error.message : "Could not open the project.");
     } finally {
       setBusyAction(null);
+    }
+  }
+
+  async function openProjectFile(file: File, handle: FileSystemFileHandle | null) {
+    const document = await importBreakdownDocument(await file.arrayBuffer());
+
+    loadDocument(document);
+    setFileHandle(handle);
+    setOpenedProjectFileName(file.name);
+    setSaveVersion(1);
+  }
+
+  async function saveProjectAs(blob: Blob) {
+    if (supportsFileSystemAccess()) {
+      const handle = await window.showSaveFilePicker!({
+        excludeAcceptAllOption: false,
+        suggestedName: openedProjectFileName ?? projectFileName(project.title.text),
+        types: PROJECT_FILE_PICKER_TYPES,
+      });
+
+      await writeProjectFile(handle, blob);
+      setFileHandle(handle);
+      setOpenedProjectFileName(handle.name);
+      setSaveVersion(1);
+      return;
+    }
+
+    showNotice("Direct overwrite is only supported in Chrome/Edge. Downloading a new copy instead.");
+    downloadProjectBlob(blob);
+  }
+
+  function downloadProjectBlob(blob: Blob) {
+    const downloadName = openedProjectFileName
+      ? versionedProjectFileName(openedProjectFileName, saveVersion)
+      : projectFileName(project.title.text);
+    const link = document.createElement("a");
+
+    link.download = downloadName;
+    link.href = URL.createObjectURL(blob);
+    link.click();
+    URL.revokeObjectURL(link.href);
+
+    if (openedProjectFileName) {
+      setSaveVersion((currentVersion) => currentVersion + 1);
     }
   }
 
@@ -132,6 +258,13 @@ export default function App() {
         <div>
           <h1>Deck Breakdown Maker</h1>
         </div>
+        {openedProjectFileName ? (
+          <div className="open-file-status" title={openedProjectFileName}>
+            <span>Template</span>
+            <strong>{openedProjectFileName}</strong>
+            {fileHandle ? <small>direct save enabled</small> : <small>download save</small>}
+          </div>
+        ) : null}
         <div className="topbar-actions">
           <input
             ref={fileInputRef}
@@ -145,19 +278,28 @@ export default function App() {
           />
           <button
             type="button"
-            title="Open project"
+            title="Open template"
             disabled={busyAction !== null}
-            onClick={() => fileInputRef.current?.click()}
+            onClick={handleOpenProjectPicker}
           >
             <FolderOpen size={18} />
           </button>
           <button
             type="button"
-            title="Save project"
+            title={fileHandle ? "Save template to the opened file" : "Save template as a new file"}
             disabled={busyAction !== null}
             onClick={handleSaveProject}
           >
             <Save size={18} />
+          </button>
+          <button
+            type="button"
+            title="Save template as"
+            disabled={busyAction !== null}
+            onClick={handleSaveProjectAs}
+          >
+            <SaveAll size={18} />
+            As
           </button>
           <button
             type="button"
@@ -196,6 +338,12 @@ export default function App() {
             <span className="loading-spinner" aria-hidden="true" />
             <p>{BUSY_MESSAGES[busyAction]}</p>
           </div>
+        </div>
+      ) : null}
+
+      {notice ? (
+        <div className="app-notice" role="status" aria-live="polite">
+          {notice.message}
         </div>
       ) : null}
 
@@ -269,4 +417,22 @@ function waitForPaint() {
       window.requestAnimationFrame(() => resolve());
     });
   });
+}
+
+function supportsFileSystemAccess() {
+  return "showOpenFilePicker" in window && "showSaveFilePicker" in window;
+}
+
+async function writeProjectFile(handle: FileSystemFileHandle, blob: Blob) {
+  const writable = await handle.createWritable();
+
+  try {
+    await writable.write(blob);
+  } finally {
+    await writable.close();
+  }
+}
+
+function isAbortError(error: unknown) {
+  return error instanceof DOMException && error.name === "AbortError";
 }
