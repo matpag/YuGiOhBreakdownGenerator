@@ -112,10 +112,12 @@ function useAssetImages(assets: Record<string, ProjectAsset>) {
 }
 
 interface SliceImageEditorProps {
+  registerImageNode: (sliceId: string, layerId: string, node: Konva.Image | null) => void;
   geometry: SliceGeometry;
   image: HTMLImageElement | null;
   isSelected: boolean;
   layer: SliceImageLayer;
+  refreshSelectedImageTransformer: () => void;
   selectSliceAtPointer: (event: Konva.KonvaEventObject<MouseEvent | TouchEvent>) => boolean;
   radius: number;
   setSelectedSlice: (sliceId: string) => void;
@@ -133,6 +135,22 @@ interface DraftZoomInputProps {
   value: number;
 }
 
+interface SelectedImageTransformerProps {
+  layer: SliceImageLayer | null;
+  sliceId: string | null;
+  targetNode: Konva.Image | null;
+  transformerRef: { current: Konva.Transformer | null };
+  updateSliceImageLayerTransform: (
+    sliceId: string,
+    layerId: string,
+    updates: Partial<SliceImageTransform>,
+  ) => void;
+}
+
+function imageNodeKey(sliceId: string, layerId: string) {
+  return `${sliceId}:${layerId}`;
+}
+
 function SliceImageEditor({
   clearSelectedLabel,
   geometry,
@@ -140,34 +158,28 @@ function SliceImageEditor({
   isSelected,
   layer,
   radius,
+  refreshSelectedImageTransformer,
+  registerImageNode,
   selectSliceAtPointer,
   setSelectedSlice,
   setSelectedSliceImageLayer,
   updateSliceImageLayerTransform,
 }: SliceImageEditorProps) {
   const imageRef = useRef<Konva.Image>(null);
-  const transformerRef = useRef<Konva.Transformer>(null);
   const transform = layer.imageTransform;
   const imageSize = getSliceImageSize(image, radius);
 
   useEffect(() => {
-    const transformer = transformerRef.current;
-    const imageNode = imageRef.current;
+    return () => registerImageNode(geometry.slice.id, layer.id, null);
+  }, [geometry.slice.id, layer.id, registerImageNode]);
 
-    if (!transformer) {
-      return;
-    }
-
-    if (isSelected && imageNode) {
-      transformer.nodes([imageNode]);
-      transformer.moveToTop();
-      transformer.getLayer()?.batchDraw();
-      return;
-    }
-
-    transformer.nodes([]);
-    transformer.getLayer()?.batchDraw();
-  }, [image, isSelected, imageSize.height, imageSize.width]);
+  const setImageNodeRef = useCallback(
+    (node: Konva.Image | null) => {
+      imageRef.current = node;
+      registerImageNode(geometry.slice.id, layer.id, node);
+    },
+    [geometry.slice.id, layer.id, registerImageNode],
+  );
 
   if (!image) {
     return null;
@@ -222,7 +234,7 @@ function SliceImageEditor({
     }
 
     imageNode.position({ x: node.x(), y: node.y() });
-    transformerRef.current?.forceUpdate();
+    refreshSelectedImageTransformer();
     node.getLayer()?.batchDraw();
   }
 
@@ -261,7 +273,7 @@ function SliceImageEditor({
         }}
       >
         <Image
-          ref={imageRef}
+          ref={setImageNodeRef}
           draggable={isSelected}
           image={image}
           height={imageSize.height}
@@ -301,25 +313,84 @@ function SliceImageEditor({
             x={transform.x}
             y={transform.y}
           />
-          <Transformer
-            ref={transformerRef}
-            anchorCornerRadius={3}
-            anchorFill="#2f80ed"
-            anchorSize={14}
-            anchorStroke="#ffffff"
-            anchorStrokeWidth={2}
-            borderDash={[8, 6]}
-            borderStroke="#2f80ed"
-            borderStrokeWidth={2}
-            enabledAnchors={["top-left", "top-right", "bottom-left", "bottom-right"]}
-            flipEnabled={false}
-            keepRatio
-            name={EDITOR_OVERLAY_NAME}
-            rotateEnabled={false}
-          />
         </>
       ) : null}
     </>
+  );
+}
+
+function SelectedImageTransformer({
+  layer,
+  sliceId,
+  targetNode,
+  transformerRef,
+  updateSliceImageLayerTransform,
+}: SelectedImageTransformerProps) {
+  useEffect(() => {
+    const transformer = transformerRef.current;
+
+    if (!transformer) {
+      return;
+    }
+
+    if (targetNode) {
+      transformer.nodes([targetNode]);
+      transformer.moveToTop();
+      transformer.getLayer()?.batchDraw();
+      return;
+    }
+
+    transformer.nodes([]);
+    transformer.getLayer()?.batchDraw();
+  }, [targetNode, transformerRef]);
+
+  if (!layer || !sliceId || !targetNode) {
+    return null;
+  }
+
+  function commitImageTransform() {
+    if (!targetNode || !layer || !sliceId) {
+      return;
+    }
+
+    const nextScale = clamp(
+      Math.max(Math.abs(targetNode.scaleX()), Math.abs(targetNode.scaleY())),
+      MIN_IMAGE_SCALE,
+      MAX_IMAGE_SCALE,
+    );
+
+    targetNode.scale({ x: nextScale, y: nextScale });
+
+    updateSliceImageLayerTransform(sliceId, layer.id, {
+      ...layer.imageTransform,
+      x: targetNode.x(),
+      y: targetNode.y(),
+      scale: nextScale,
+      rotation: targetNode.rotation(),
+    });
+
+    transformerRef.current?.forceUpdate();
+    transformerRef.current?.getLayer()?.batchDraw();
+  }
+
+  return (
+    <Transformer
+      ref={transformerRef}
+      anchorCornerRadius={3}
+      anchorFill="#2f80ed"
+      anchorSize={14}
+      anchorStroke="#ffffff"
+      anchorStrokeWidth={2}
+      borderDash={[8, 6]}
+      borderStroke="#2f80ed"
+      borderStrokeWidth={2}
+      enabledAnchors={["top-left", "top-right", "bottom-left", "bottom-right"]}
+      flipEnabled={false}
+      keepRatio
+      name={EDITOR_OVERLAY_NAME}
+      onTransformEnd={commitImageTransform}
+      rotateEnabled={false}
+    />
   );
 }
 
@@ -553,10 +624,13 @@ function DraftZoomInput({ onCommit, value }: DraftZoomInputProps) {
 export function BreakdownStage() {
   const stageRef = useRef<Konva.Stage>(null);
   const viewportRef = useRef<HTMLDivElement>(null);
+  const selectedImageTransformerRef = useRef<Konva.Transformer>(null);
+  const imageNodeRefs = useRef<Map<string, Konva.Image>>(new Map());
   const [viewportSize, setViewportSize] = useState({ width: 900, height: 900 });
   const [zoomMode, setZoomMode] = useState<"fit" | "fixed">("fit");
   const [zoomPercent, setZoomPercent] = useState(100);
   const [selectedLabelSliceId, setSelectedLabelSliceId] = useState<string | null>(null);
+  const [, setImageNodeVersion] = useState(0);
   const project = useProjectStore((state) => state.project);
   const assets = useProjectStore((state) => state.assets);
   const setSelectedSlice = useProjectStore((state) => state.setSelectedSlice);
@@ -588,6 +662,42 @@ export function BreakdownStage() {
 
     return 0;
   });
+  const selectedSlice =
+    project.pieChart.slices.find((slice) => slice.id === project.pieChart.selectedSliceId) ?? null;
+  const selectedImageLayer =
+    selectedSlice?.imageLayers.find((layer) => layer.id === selectedSlice.selectedImageLayerId) ??
+    null;
+  const selectedImageNode =
+    selectedSlice && selectedImageLayer && selectedLabelSliceId !== selectedSlice.id
+      ? imageNodeRefs.current.get(imageNodeKey(selectedSlice.id, selectedImageLayer.id)) ?? null
+      : null;
+
+  const registerImageNode = useCallback(
+    (sliceId: string, layerId: string, node: Konva.Image | null) => {
+      const key = imageNodeKey(sliceId, layerId);
+      const nodes = imageNodeRefs.current;
+
+      if (node) {
+        if (nodes.get(key) === node) {
+          return;
+        }
+
+        nodes.set(key, node);
+        setImageNodeVersion((version) => version + 1);
+        return;
+      }
+
+      if (nodes.delete(key)) {
+        setImageNodeVersion((version) => version + 1);
+      }
+    },
+    [],
+  );
+
+  const refreshSelectedImageTransformer = useCallback(() => {
+    selectedImageTransformerRef.current?.forceUpdate();
+    selectedImageTransformerRef.current?.getLayer()?.batchDraw();
+  }, []);
 
   useEffect(() => {
     const viewport = viewportRef.current;
@@ -862,6 +972,8 @@ export function BreakdownStage() {
                         key={layer.id}
                         layer={layer}
                         radius={project.pieChart.radius}
+                        registerImageNode={registerImageNode}
+                        refreshSelectedImageTransformer={refreshSelectedImageTransformer}
                         selectSliceAtPointer={selectSliceAtPointer}
                         clearSelectedLabel={() => setSelectedLabelSliceId(null)}
                         setSelectedSlice={setSelectedSlice}
@@ -904,6 +1016,13 @@ export function BreakdownStage() {
                 />
               );
             })}
+            <SelectedImageTransformer
+              layer={selectedImageLayer}
+              sliceId={selectedSlice?.id ?? null}
+              targetNode={selectedImageNode}
+              transformerRef={selectedImageTransformerRef}
+              updateSliceImageLayerTransform={updateSliceImageLayerTransform}
+            />
           </Layer>
           </Stage>
         </div>
