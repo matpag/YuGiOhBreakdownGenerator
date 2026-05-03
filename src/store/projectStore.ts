@@ -35,6 +35,7 @@ interface ProjectState extends BreakdownDocument {
   addSliceImageLayer: (sliceId: string) => void;
   removeSliceImageLayer: (sliceId: string, layerId: string) => void;
   moveSliceImageLayer: (sliceId: string, layerId: string, direction: -1 | 1) => void;
+  resetChartLabelsAndImages: () => void;
   addSlice: () => void;
   removeSelectedSlice: () => void;
   addAsset: (asset: ProjectAsset) => AssetId;
@@ -213,30 +214,60 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
       },
     })),
   removeSliceImageLayer: (sliceId, layerId) =>
-    set((state) => ({
-      project: {
+    set((state) => {
+      let removedAssetId: AssetId | null = null;
+      const slices = state.project.pieChart.slices.map((slice) => {
+        if (slice.id !== sliceId) {
+          return slice;
+        }
+
+        const targetLayer = slice.imageLayers.find((layer) => layer.id === layerId);
+        removedAssetId = targetLayer?.assetId ?? null;
+
+        if (slice.imageLayers.length <= 1) {
+          return {
+            ...slice,
+            imageLayers: slice.imageLayers.map((layer) =>
+              layer.id === layerId
+                ? {
+                    ...layer,
+                    assetId: null,
+                    imageTransform: { ...DEFAULT_SLICE_IMAGE_TRANSFORM },
+                  }
+                : layer,
+            ),
+            selectedImageLayerId: layerId,
+          };
+        }
+
+        const imageLayers = slice.imageLayers.filter((layer) => layer.id !== layerId);
+
+        return {
+          ...slice,
+          imageLayers,
+          selectedImageLayerId:
+            slice.selectedImageLayerId === layerId ? imageLayers[0].id : slice.selectedImageLayerId,
+        };
+      });
+      const project = {
         ...state.project,
         pieChart: {
           ...state.project.pieChart,
-          slices: state.project.pieChart.slices.map((slice) => {
-            if (slice.id !== sliceId || slice.imageLayers.length <= 1) {
-              return slice;
-            }
-
-            const imageLayers = slice.imageLayers.filter((layer) => layer.id !== layerId);
-
-            return {
-              ...slice,
-              imageLayers,
-              selectedImageLayerId:
-                slice.selectedImageLayerId === layerId
-                  ? imageLayers[0].id
-                  : slice.selectedImageLayerId,
-            };
-          }),
+          slices,
         },
-      },
-    })),
+      };
+
+      if (!removedAssetId || isAssetReferenced(project, project.imageLibrary, removedAssetId)) {
+        return { project };
+      }
+
+      const { [removedAssetId]: _removedAsset, ...assets } = state.assets;
+
+      return {
+        assets,
+        project,
+      };
+    }),
   moveSliceImageLayer: (sliceId, layerId, direction) =>
     set((state) => ({
       project: {
@@ -271,6 +302,61 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
         },
       },
     })),
+  resetChartLabelsAndImages: () =>
+    set((state) => {
+      const removedAssetIds = new Set<AssetId>();
+      const slices = state.project.pieChart.slices.map((slice) => {
+        slice.imageLayers.forEach((layer) => {
+          if (layer.assetId) {
+            removedAssetIds.add(layer.assetId);
+          }
+        });
+
+        const defaultLayer = slice.imageLayers[0] ?? {
+          id: `slice-image-${crypto.randomUUID()}`,
+          name: "Image 1",
+          assetId: null,
+          imageTransform: { ...DEFAULT_SLICE_IMAGE_TRANSFORM },
+        };
+
+        return {
+          ...slice,
+          labelBox: undefined,
+          imageLayers: [
+            {
+              ...defaultLayer,
+              name: "Image 1",
+              assetId: null,
+              imageTransform: { ...DEFAULT_SLICE_IMAGE_TRANSFORM },
+            },
+          ],
+          selectedImageLayerId: defaultLayer.id,
+        };
+      });
+      const pieChart = {
+        ...state.project.pieChart,
+        slices,
+      };
+      const project = {
+        ...state.project,
+        pieChart: {
+          ...pieChart,
+          slices: normalizeLabelDistances(pieChart),
+        },
+      };
+      const assets = { ...state.assets };
+
+      for (const assetId of removedAssetIds) {
+        if (!isAssetReferenced(project, project.imageLibrary, assetId)) {
+          delete assets[assetId];
+        }
+      }
+
+      return {
+        assets,
+        project,
+      };
+    }),
   addSlice: () =>
     set((state) => {
       const index = state.project.pieChart.slices.length + 1;
@@ -431,14 +517,44 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
               return slice;
             }
 
-            const selectedLayerId = slice.selectedImageLayerId;
+            const firstLayer = slice.imageLayers[0];
+
+            if (!firstLayer) {
+              const layer: SliceImageLayer = {
+                id: `slice-image-${crypto.randomUUID()}`,
+                name: "Image 1",
+                assetId,
+                imageTransform: { ...DEFAULT_SLICE_IMAGE_TRANSFORM },
+              };
+
+              return {
+                ...slice,
+                imageLayers: [layer],
+                selectedImageLayerId: layer.id,
+              };
+            }
+
+            if (firstLayer.assetId) {
+              const layer: SliceImageLayer = {
+                id: `slice-image-${crypto.randomUUID()}`,
+                name: `Image ${slice.imageLayers.length + 1}`,
+                assetId,
+                imageTransform: { ...DEFAULT_SLICE_IMAGE_TRANSFORM },
+              };
+
+              return {
+                ...slice,
+                imageLayers: [...slice.imageLayers, layer],
+                selectedImageLayerId: layer.id,
+              };
+            }
 
             return {
               ...slice,
               imageLayers: slice.imageLayers.map((layer) =>
-                layer.id === selectedLayerId ? { ...layer, assetId } : layer,
+                layer.id === firstLayer.id ? { ...layer, assetId } : layer,
               ),
-              selectedImageLayerId: selectedLayerId,
+              selectedImageLayerId: firstLayer.id,
             };
           }),
         },

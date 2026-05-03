@@ -151,6 +151,20 @@ function imageNodeKey(sliceId: string, layerId: string) {
   return `${sliceId}:${layerId}`;
 }
 
+function isEditableKeyboardTarget(target: EventTarget | null) {
+  if (!(target instanceof HTMLElement)) {
+    return false;
+  }
+
+  return (
+    target.isContentEditable ||
+    target.closest('[role="dialog"]') !== null ||
+    target instanceof HTMLInputElement ||
+    target instanceof HTMLSelectElement ||
+    target instanceof HTMLTextAreaElement
+  );
+}
+
 function SliceImageEditor({
   clearSelectedLabel,
   geometry,
@@ -636,6 +650,7 @@ export function BreakdownStage() {
   const setSelectedSlice = useProjectStore((state) => state.setSelectedSlice);
   const updateSlice = useProjectStore((state) => state.updateSlice);
   const setSelectedSliceImageLayer = useProjectStore((state) => state.setSelectedSliceImageLayer);
+  const removeSliceImageLayer = useProjectStore((state) => state.removeSliceImageLayer);
   const updateSliceImageLayerTransform = useProjectStore(
     (state) => state.updateSliceImageLayerTransform,
   );
@@ -740,6 +755,31 @@ export function BreakdownStage() {
       setSelectedLabelSliceId(null);
     }
   }, [project.pieChart.selectedSliceId, project.pieChart.slices, selectedLabelSliceId]);
+
+  useEffect(() => {
+    function handleDeleteSelectedImage(event: KeyboardEvent) {
+      if (
+        event.key !== "Delete" ||
+        event.repeat ||
+        isEditableKeyboardTarget(event.target) ||
+        selectedLabelSliceId !== null ||
+        !selectedSlice ||
+        !selectedImageLayer ||
+        (!selectedImageLayer.assetId && selectedSlice.imageLayers.length <= 1)
+      ) {
+        return;
+      }
+
+      event.preventDefault();
+      removeSliceImageLayer(selectedSlice.id, selectedImageLayer.id);
+    }
+
+    window.addEventListener("keydown", handleDeleteSelectedImage);
+
+    return () => {
+      window.removeEventListener("keydown", handleDeleteSelectedImage);
+    };
+  }, [removeSliceImageLayer, selectedImageLayer, selectedLabelSliceId, selectedSlice]);
 
   function selectSlice(sliceId: string) {
     setSelectedLabelSliceId(null);

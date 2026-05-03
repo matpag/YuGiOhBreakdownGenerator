@@ -105,6 +105,7 @@ export function EditorSidebar() {
   const addSliceImageLayer = useProjectStore((state) => state.addSliceImageLayer);
   const removeSliceImageLayer = useProjectStore((state) => state.removeSliceImageLayer);
   const moveSliceImageLayer = useProjectStore((state) => state.moveSliceImageLayer);
+  const resetChartLabelsAndImages = useProjectStore((state) => state.resetChartLabelsAndImages);
   const setSliceImageLayerAsset = useProjectStore((state) => state.setSliceImageLayerAsset);
   const addAsset = useProjectStore((state) => state.addAsset);
   const addEmbeddedFont = useProjectStore((state) => state.addEmbeddedFont);
@@ -552,6 +553,10 @@ export function EditorSidebar() {
             }
           />
         </label>
+        <button type="button" onClick={resetChartLabelsAndImages}>
+          <RotateCcw size={16} />
+          Reset all labels and images
+        </button>
       </section>
 
       <section className="panel">
@@ -623,7 +628,7 @@ export function EditorSidebar() {
               onClick={() => updateSlice(selectedSlice.id, { labelBox: undefined })}
             >
               <RotateCcw size={16} />
-              Reset label box
+              Reset label position
             </button>
           ) : null}
           <div className="slice-layer-header">
@@ -692,8 +697,12 @@ export function EditorSidebar() {
                   <button
                     className="icon-button"
                     type="button"
-                    title="Remove image layer"
-                    disabled={selectedSlice.imageLayers.length <= 1}
+                    title={
+                      selectedSlice.imageLayers.length <= 1
+                        ? "Clear image"
+                        : "Remove image layer"
+                    }
+                    disabled={selectedSlice.imageLayers.length <= 1 && !layer.assetId}
                     onClick={() => removeSliceImageLayer(selectedSlice.id, layer.id)}
                   >
                     <Trash2 size={15} />
