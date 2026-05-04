@@ -8,6 +8,7 @@ import {
   Pencil,
   Search,
   Trash2,
+  X,
 } from "lucide-react";
 import { fileToAsset, remoteImageToAsset, validateImageFile } from "../lib/assets";
 import { useProjectStore } from "../store/projectStore";
@@ -236,6 +237,14 @@ export function ImageLibrarySidebar() {
     }
   }
 
+  function clearArtworkSearch() {
+    setArtworkSearchQuery("");
+    setArtworkSearchResults([]);
+    setArtworkSearchPage(0);
+    setArtworkSearchStatus("idle");
+    setArtworkSearchError(null);
+  }
+
   async function addArtworkResult(result: ArtworkSearchResult) {
     if (addedArtworkIds.has(result.id)) {
       return;
@@ -297,6 +306,19 @@ export function ImageLibrarySidebar() {
                 <Search size={16} />
                 {artworkSearchStatus === "loading" ? "Searching" : "Search"}
               </button>
+              <button
+                className="icon-button image-search-clear-button"
+                type="button"
+                title="Clear image search"
+                disabled={
+                  !artworkSearchQuery &&
+                  artworkSearchResults.length === 0 &&
+                  !artworkSearchError
+                }
+                onClick={clearArtworkSearch}
+              >
+                <X size={16} />
+              </button>
             </form>
             {artworkSearchQuery.trim() ? (
               <a className="image-search-source" href={artworkSearchUrl} target="_blank" rel="noreferrer">
@@ -354,7 +376,11 @@ export function ImageLibrarySidebar() {
                         onClick={() => addArtworkResult(result)}
                       >
                         <ImagePlus size={15} />
-                        {isAddingArtwork ? "Adding" : isArtworkAdded ? "Added" : "Add"}
+                        {isAddingArtwork
+                          ? "Adding"
+                          : isArtworkAdded
+                            ? "Added"
+                            : "Add to Library"}
                       </button>
                     </div>
                   </article>

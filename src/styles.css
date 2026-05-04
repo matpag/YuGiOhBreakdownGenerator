@@ -493,10 +493,23 @@ textarea {
 .image-search-form {
   display: grid;
   gap: 8px;
+  grid-template-columns: 1fr 34px;
 }
 
-.image-search-form button {
+.image-search-form label {
+  grid-column: 1 / -1;
+  min-width: 0;
+}
+
+.image-search-form > button[type="submit"] {
   justify-content: center;
+  justify-self: stretch;
+}
+
+.image-search-clear-button {
+  justify-content: center;
+  min-height: 34px;
+  width: 34px;
 }
 
 .image-search-source {
@@ -515,7 +528,16 @@ textarea {
   display: grid;
   font-size: 12px;
   gap: 8px;
-  grid-template-columns: 30px 1fr 30px;
+  grid-template-columns: 32px 1fr 32px;
+}
+
+.image-search-pagination .icon-button {
+  align-items: center;
+  display: inline-flex;
+  height: 32px;
+  justify-content: center;
+  min-height: 32px;
+  width: 32px;
 }
 
 .image-search-pagination span {
