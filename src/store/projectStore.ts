@@ -37,6 +37,8 @@ interface ProjectState extends BreakdownDocument {
   moveSliceImageLayer: (sliceId: string, layerId: string, direction: -1 | 1) => void;
   resetChartLabelsAndImages: () => void;
   addSlice: () => void;
+  moveSlice: (sliceId: string, targetIndex: number) => void;
+  removeSlice: (sliceId: string) => void;
   removeSelectedSlice: () => void;
   addAsset: (asset: ProjectAsset) => AssetId;
   addEmbeddedFont: (font: EmbeddedFont) => void;
@@ -396,13 +398,25 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
         },
       };
     }),
-  removeSelectedSlice: () =>
+  moveSlice: (sliceId, targetIndex) =>
     set((state) => {
-      const selectedSliceId = state.project.pieChart.selectedSliceId;
-      const slices = state.project.pieChart.slices.filter((slice) => slice.id !== selectedSliceId);
+      const currentIndex = state.project.pieChart.slices.findIndex((slice) => slice.id === sliceId);
+
+      if (
+        currentIndex === -1 ||
+        targetIndex < 0 ||
+        targetIndex >= state.project.pieChart.slices.length ||
+        currentIndex === targetIndex
+      ) {
+        return state;
+      }
+
+      const slices = [...state.project.pieChart.slices];
+      const [slice] = slices.splice(currentIndex, 1);
+      slices.splice(targetIndex, 0, slice);
+
       const pieChart = {
         ...state.project.pieChart,
-        selectedSliceId: slices[0]?.id ?? null,
         slices,
       };
 
@@ -416,6 +430,35 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
         },
       };
     }),
+  removeSlice: (sliceId) =>
+    set((state) => {
+      const slices = state.project.pieChart.slices.filter((slice) => slice.id !== sliceId);
+      const selectedSliceWasRemoved = state.project.pieChart.selectedSliceId === sliceId;
+      const pieChart = {
+        ...state.project.pieChart,
+        selectedSliceId: selectedSliceWasRemoved
+          ? slices[0]?.id ?? null
+          : state.project.pieChart.selectedSliceId,
+        slices,
+      };
+
+      return {
+        project: {
+          ...state.project,
+          pieChart: {
+            ...pieChart,
+            slices: normalizeLabelDistances(pieChart),
+          },
+        },
+      };
+    }),
+  removeSelectedSlice: () => {
+    const selectedSliceId = get().project.pieChart.selectedSliceId;
+
+    if (selectedSliceId) {
+      get().removeSlice(selectedSliceId);
+    }
+  },
   addAsset: (asset) => {
     set((state) => ({
       assets: {

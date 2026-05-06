@@ -833,6 +833,36 @@ textarea {
   gap: 8px;
 }
 
+.slice-drop-indicator {
+  background: var(--active-border);
+  border-radius: 999px;
+  box-shadow: 0 0 0 2px var(--surface);
+  height: 3px;
+  margin: -5px 10px;
+  position: relative;
+}
+
+.slice-drop-indicator::before,
+.slice-drop-indicator::after {
+  background: var(--active-border);
+  border: 2px solid var(--surface);
+  border-radius: 50%;
+  content: "";
+  height: 8px;
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 8px;
+}
+
+.slice-drop-indicator::before {
+  left: -5px;
+}
+
+.slice-drop-indicator::after {
+  right: -5px;
+}
+
 .slice-layer-header {
   align-items: center;
   display: flex;
@@ -922,10 +952,28 @@ textarea {
 
 .slice-row {
   align-items: center;
+  background: var(--control-bg);
+  border: 1px solid var(--control-border);
+  border-radius: 6px;
   display: grid;
   gap: 8px;
-  grid-template-columns: 1fr 72px;
+  grid-template-columns: 18px minmax(0, 1fr) 30px;
+  min-height: 36px;
+  padding: 0 6px 0 10px;
   text-align: left;
+}
+
+.slice-row:hover {
+  background: var(--control-hover);
+}
+
+.slice-row-grip {
+  color: var(--text-subtle);
+  cursor: grab;
+}
+
+.slice-row:active .slice-row-grip {
+  cursor: grabbing;
 }
 
 .slice-row-active {
@@ -933,8 +981,40 @@ textarea {
   border-color: var(--active-border);
 }
 
+.slice-row-active:hover {
+  background: var(--active-bg-strong);
+}
+
+.slice-row-dragging {
+  box-shadow: 0 8px 18px var(--shadow);
+  opacity: 1;
+}
+
+.slice-row-select {
+  background: transparent;
+  border-color: transparent;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: 1fr 72px;
+  min-height: 30px;
+  min-width: 0;
+  padding: 0;
+}
+
+.slice-row-select:hover {
+  background: transparent;
+}
+
 .slice-row span {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.slice-row-delete {
+  align-items: center;
+  color: var(--danger-text);
+  justify-content: center;
+  min-height: 30px;
+  width: 30px;
 }

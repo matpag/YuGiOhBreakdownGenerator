@@ -1,10 +1,10 @@
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { Fragment, type DragEvent, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import {
   ArrowDown,
   ArrowUp,
+  GripVertical,
   ImagePlus,
-  Minus,
   PanelLeftClose,
   PanelLeftOpen,
   Plus,
@@ -96,7 +96,8 @@ export function EditorSidebar() {
   const updateTitle = useProjectStore((state) => state.updateTitle);
   const updatePieChart = useProjectStore((state) => state.updatePieChart);
   const addSlice = useProjectStore((state) => state.addSlice);
-  const removeSelectedSlice = useProjectStore((state) => state.removeSelectedSlice);
+  const moveSlice = useProjectStore((state) => state.moveSlice);
+  const removeSlice = useProjectStore((state) => state.removeSlice);
   const updateSlice = useProjectStore((state) => state.updateSlice);
   const updateSliceImageLayerTransform = useProjectStore(
     (state) => state.updateSliceImageLayerTransform,
@@ -124,6 +125,10 @@ export function EditorSidebar() {
   const [collapsed, setCollapsed] = useState(false);
   const [fontAccessRequested, setFontAccessRequested] = useState(false);
   const [imageUploadError, setImageUploadError] = useState<string | null>(null);
+  const [draggingSliceId, setDraggingSliceId] = useState<string | null>(null);
+  const [dragPreviewSliceIds, setDragPreviewSliceIds] = useState<string[] | null>(null);
+  const sliceRowRefs = useRef<Map<string, HTMLDivElement>>(new Map());
+  const sliceRowRectsRef = useRef<Map<string, DOMRect> | null>(null);
 
   useEffect(() => {
     setFontOptions((currentOptions) =>
@@ -230,6 +235,92 @@ export function EditorSidebar() {
     setFontOptions((currentOptions) => mergeFontOptions([...currentOptions, family]));
   }
 
+  function setSliceRowRef(sliceId: string, node: HTMLDivElement | null) {
+    if (node) {
+      sliceRowRefs.current.set(sliceId, node);
+      return;
+    }
+
+    sliceRowRefs.current.delete(sliceId);
+  }
+
+  function captureSliceRowPositions() {
+    sliceRowRectsRef.current = new Map(
+      Array.from(sliceRowRefs.current.entries()).map(([sliceId, node]) => [
+        sliceId,
+        node.getBoundingClientRect(),
+      ]),
+    );
+  }
+
+  function handleSliceDragStart(event: DragEvent<HTMLDivElement>, sliceId: string) {
+    const sliceIds = project.pieChart.slices.map((slice) => slice.id);
+
+    setDraggingSliceId(sliceId);
+    setDragPreviewSliceIds(sliceIds);
+    event.dataTransfer.effectAllowed = "move";
+    event.dataTransfer.setData("text/plain", sliceId);
+  }
+
+  function handleSliceDragOver(event: DragEvent<HTMLDivElement>, targetSliceId: string) {
+    const sourceSliceId = draggingSliceId ?? event.dataTransfer.getData("text/plain");
+    const orderedSliceIds = dragPreviewSliceIds ?? project.pieChart.slices.map((slice) => slice.id);
+
+    if (!sourceSliceId || sourceSliceId === targetSliceId) {
+      return;
+    }
+
+    const dragIndex = orderedSliceIds.indexOf(sourceSliceId);
+    const targetIndex = orderedSliceIds.indexOf(targetSliceId);
+
+    if (dragIndex === -1 || targetIndex === -1) {
+      return;
+    }
+
+    event.preventDefault();
+    event.dataTransfer.dropEffect = "move";
+
+    const rect = event.currentTarget.getBoundingClientRect();
+    const pointerY = event.clientY - rect.top;
+    const rowMidpoint = rect.height / 2;
+
+    if (dragIndex < targetIndex && pointerY < rowMidpoint) {
+      return;
+    }
+
+    if (dragIndex > targetIndex && pointerY > rowMidpoint) {
+      return;
+    }
+
+    const nextSliceIds = [...orderedSliceIds];
+    const [sliceId] = nextSliceIds.splice(dragIndex, 1);
+    nextSliceIds.splice(targetIndex, 0, sliceId);
+
+    captureSliceRowPositions();
+    setDragPreviewSliceIds(nextSliceIds);
+  }
+
+  function handleSliceDrop(event: DragEvent<HTMLDivElement>) {
+    const sourceSliceId = draggingSliceId ?? event.dataTransfer.getData("text/plain");
+    const targetIndex = dragPreviewSliceIds?.indexOf(sourceSliceId) ?? -1;
+    const listRect = event.currentTarget.getBoundingClientRect();
+    const droppedInsideList =
+      event.clientX >= listRect.left &&
+      event.clientX <= listRect.right &&
+      event.clientY >= listRect.top &&
+      event.clientY <= listRect.bottom;
+
+    event.preventDefault();
+
+    if (sourceSliceId && targetIndex !== -1 && droppedInsideList) {
+      moveSlice(sourceSliceId, targetIndex);
+    }
+
+    setDraggingSliceId(null);
+    setDragPreviewSliceIds(null);
+  }
+
+
   const backgroundAsset = project.background.assetId ? assets[project.background.assetId] : null;
   const selectedSlice =
     project.pieChart.slices.find((slice) => slice.id === project.pieChart.selectedSliceId) ?? null;
@@ -237,6 +328,52 @@ export function EditorSidebar() {
     selectedSlice?.imageLayers.find((layer) => layer.id === selectedSlice.selectedImageLayerId) ??
     selectedSlice?.imageLayers[0] ??
     null;
+  const sliceById = new Map(project.pieChart.slices.map((slice) => [slice.id, slice]));
+  const previewSlices = dragPreviewSliceIds
+    ? dragPreviewSliceIds.map((sliceId) => sliceById.get(sliceId)).filter((slice) => slice !== undefined)
+    : null;
+  const visibleSlices = previewSlices ?? project.pieChart.slices;
+  const dropIndicatorSliceId = draggingSliceId && dragPreviewSliceIds ? draggingSliceId : null;
+
+  useLayoutEffect(() => {
+    const previousRects = sliceRowRectsRef.current;
+
+    if (!previousRects) {
+      return;
+    }
+
+    sliceRowRectsRef.current = null;
+
+    for (const [sliceId, node] of sliceRowRefs.current.entries()) {
+      if (sliceId === draggingSliceId) {
+        continue;
+      }
+
+      const previousRect = previousRects.get(sliceId);
+
+      if (!previousRect) {
+        continue;
+      }
+
+      const currentRect = node.getBoundingClientRect();
+      const deltaY = previousRect.top - currentRect.top;
+
+      if (Math.abs(deltaY) < 1) {
+        continue;
+      }
+
+      node.animate(
+        [
+          { transform: `translateY(${deltaY}px)` },
+          { transform: "translateY(0)" },
+        ],
+        {
+          duration: 160,
+          easing: "ease-out",
+        },
+      );
+    }
+  }, [dragPreviewSliceIds, draggingSliceId, project.pieChart.slices]);
 
   return (
     <aside className={`sidebar ${collapsed ? "sidebar-collapsed" : ""}`}>
@@ -566,24 +703,55 @@ export function EditorSidebar() {
             <Plus size={16} />
             Add
           </button>
-          <button type="button" onClick={removeSelectedSlice} disabled={!selectedSlice}>
-            <Minus size={16} />
-            Remove
-          </button>
         </div>
-        <div className="slice-list">
-          {project.pieChart.slices.map((slice) => (
-            <button
-              className={`slice-row ${
-                project.pieChart.selectedSliceId === slice.id ? "slice-row-active" : ""
-              }`}
-              key={slice.id}
-              type="button"
-              onClick={() => setSelectedSlice(slice.id)}
-            >
-              <span>{slice.label}</span>
-              <strong>{slice.value}</strong>
-            </button>
+        <div
+          className="slice-list"
+          onDragOver={(event) => {
+            if (draggingSliceId) {
+              event.preventDefault();
+            }
+          }}
+          onDrop={handleSliceDrop}
+        >
+          {visibleSlices.map((slice) => (
+            <Fragment key={slice.id}>
+              {dropIndicatorSliceId === slice.id ? (
+                <div className="slice-drop-indicator" aria-hidden="true" />
+              ) : null}
+              <div
+                ref={(node) => setSliceRowRef(slice.id, node)}
+                className={`slice-row ${
+                  project.pieChart.selectedSliceId === slice.id ? "slice-row-active" : ""
+                } ${draggingSliceId === slice.id ? "slice-row-dragging" : ""
+                }`}
+                draggable
+                title="Drag to reorder"
+                onDragEnd={() => {
+                  setDraggingSliceId(null);
+                  setDragPreviewSliceIds(null);
+                }}
+                onDragOver={(event) => handleSliceDragOver(event, slice.id)}
+                onDragStart={(event) => handleSliceDragStart(event, slice.id)}
+              >
+                <GripVertical aria-hidden="true" className="slice-row-grip" size={16} />
+                <button
+                  className="slice-row-select"
+                  type="button"
+                  onClick={() => setSelectedSlice(slice.id)}
+                >
+                  <span>{slice.label}</span>
+                  <strong>{slice.value}</strong>
+                </button>
+                <button
+                  className="icon-button slice-row-delete"
+                  type="button"
+                  title={`Delete ${slice.label}`}
+                  onClick={() => removeSlice(slice.id)}
+                >
+                  <Trash2 size={15} />
+                </button>
+              </div>
+            </Fragment>
           ))}
         </div>
       </section>
