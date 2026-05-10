@@ -192,15 +192,18 @@ export function EditorSidebar() {
 
     const asset = await fileToAsset(file);
     const assetId = addAsset(asset);
-    addImageLibraryItem({
-      id: crypto.randomUUID(),
-      assetId,
-      name: asset.name,
-      createdAt: new Date().toISOString(),
-    });
 
     if (target === "background") {
       setBackgroundAsset(assetId);
+    }
+
+    if (target === "slice") {
+      addImageLibraryItem({
+        id: crypto.randomUUID(),
+        assetId,
+        name: asset.name,
+        createdAt: new Date().toISOString(),
+      });
     }
 
     if (target === "slice" && sliceId && layerId) {
