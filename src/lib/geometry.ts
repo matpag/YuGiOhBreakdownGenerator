@@ -23,16 +23,21 @@ export const LABEL_BOX_OFFSET_X = LABEL_BOX_WIDTH / 2;
 export const LABEL_BOX_OFFSET_Y = 32;
 export const MIN_LABEL_BOX_WIDTH = 72;
 export const MIN_LABEL_BOX_HEIGHT = 40;
-const LABEL_LINE_COUNT = 2;
+const LABEL_VALUE_LINE_COUNT = 1;
+let measurementCanvas: HTMLCanvasElement | null = null;
 
-export function labelTextHeight(chart: PieChartSettings) {
-  return chart.labelStyle.fontSize * LABEL_LINE_COUNT + chart.labelStyle.strokeWidth * 2;
+export function labelTextHeight(chart: PieChartSettings, slice?: ChartSlice) {
+  return labelTextLineCount(chart, slice) * chart.labelStyle.fontSize + chart.labelStyle.strokeWidth * 2;
 }
 
-export function safeLabelDistanceForAngle(chart: PieChartSettings, angle: number) {
+export function safeLabelDistanceForAngle(
+  chart: PieChartSettings,
+  angle: number,
+  slice?: ChartSlice,
+) {
   const radians = toRadians(angle);
   const xInward = Math.abs(Math.cos(radians)) * LABEL_BOX_OFFSET_X;
-  const labelHeight = labelTextHeight(chart);
+  const labelHeight = labelTextHeight(chart, slice);
   const yInward =
     Math.sin(radians) >= 0
       ? Math.sin(radians) * LABEL_BOX_OFFSET_Y
@@ -48,7 +53,7 @@ export function normalizeLabelDistances(chart: PieChartSettings): ChartSlice[] {
   const safeDistances = new Map(
     geometries.map((geometry) => [
       geometry.slice.id,
-      safeLabelDistanceForAngle(chart, geometry.midAngle),
+      safeLabelDistanceForAngle(chart, geometry.midAngle, geometry.slice),
     ]),
   );
 
@@ -63,16 +68,83 @@ export function defaultLabelBox(
   canvas: CanvasSettings,
   angle: number,
   labelDistance = DEFAULT_LABEL_DISTANCE,
+  slice?: ChartSlice,
 ): SliceLabelBox {
   const position = labelPosition(chart, angle, labelDistance);
   const box = {
     x: position.x - LABEL_BOX_OFFSET_X,
     y: position.y - LABEL_BOX_OFFSET_Y,
     width: LABEL_BOX_WIDTH,
-    height: Math.max(MIN_LABEL_BOX_HEIGHT, Math.ceil(labelTextHeight(chart))),
+    height: Math.max(MIN_LABEL_BOX_HEIGHT, Math.ceil(labelTextHeight(chart, slice))),
   };
 
   return clampLabelBoxToCanvas(box, canvas);
+}
+
+function labelTextLineCount(chart: PieChartSettings, slice?: ChartSlice) {
+  if (!slice) {
+    return 1 + LABEL_VALUE_LINE_COUNT;
+  }
+
+  return wrappedLineCount(slice.label, LABEL_BOX_WIDTH, chart) + LABEL_VALUE_LINE_COUNT;
+}
+
+function wrappedLineCount(text: string, maxWidth: number, chart: PieChartSettings) {
+  const paragraphs = text.split(/\r?\n/);
+
+  return paragraphs.reduce((lineCount, paragraph) => {
+    const words = paragraph.trim().split(/\s+/).filter(Boolean);
+
+    if (words.length === 0) {
+      return lineCount + 1;
+    }
+
+    let paragraphLines = 1;
+    let currentLineWidth = 0;
+    const spaceWidth = measureLabelTextWidth(" ", chart);
+
+    for (const word of words) {
+      const wordWidth = measureLabelTextWidth(word, chart);
+
+      if (currentLineWidth === 0) {
+        paragraphLines += Math.max(0, Math.ceil(wordWidth / maxWidth) - 1);
+        currentLineWidth = wordWidth % maxWidth || Math.min(wordWidth, maxWidth);
+        continue;
+      }
+
+      if (currentLineWidth + spaceWidth + wordWidth > maxWidth) {
+        paragraphLines += Math.max(1, Math.ceil(wordWidth / maxWidth));
+        currentLineWidth = wordWidth % maxWidth || Math.min(wordWidth, maxWidth);
+        continue;
+      }
+
+      currentLineWidth += spaceWidth + wordWidth;
+    }
+
+    return lineCount + paragraphLines;
+  }, 0);
+}
+
+function measureLabelTextWidth(text: string, chart: PieChartSettings) {
+  const context = getMeasurementContext();
+
+  if (!context) {
+    return text.length * chart.labelStyle.fontSize * 0.58;
+  }
+
+  context.font = `${chart.labelStyle.fontWeight} ${chart.labelStyle.fontSize}px ${chart.labelStyle.fontFamily}`;
+
+  return context.measureText(text).width;
+}
+
+function getMeasurementContext() {
+  if (typeof document === "undefined") {
+    return null;
+  }
+
+  measurementCanvas ??= document.createElement("canvas");
+
+  return measurementCanvas.getContext("2d");
 }
 
 export function clampLabelBoxToCanvas(

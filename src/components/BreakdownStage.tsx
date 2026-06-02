@@ -437,6 +437,7 @@ function SliceLabelEditor({
       canvas,
       geometry.midAngle,
       geometry.slice.labelDistance ?? DEFAULT_LABEL_DISTANCE,
+      geometry.slice,
     );
 
   useEffect(() => {
