@@ -6,6 +6,14 @@ Deck Breakdown Maker is a browser-based editor for creating Yu-Gi-Oh deck breakd
 
 Use the toolbar at the top to open projects, save projects, save copies, preview the exported PNG, export the PNG, and switch theme.
 
+## Retroformats handoff (2026-10-17)
+
+Continue work in this repository on `main`. The visual alignment is committed here and published on GitHub Pages; the portal's `.local/worktrees/` directories were temporary implementation copies. The canonical kit and cross-app verification report live in the sibling `YuGiOh Retroformatsdotcom/design-system/` and `YuGiOh Retroformatsdotcom/docs/visual-alignment-verification.md`.
+
+Probability Calculator is the interface style reference. Serve the shared CSS and mark from `public/retroformats/` unchanged; put app-specific styling in `src/styles.css`. The header links to the portal and its four shortlinks. Existing Light/Dark modes remain available; coral selection overlays apply only in Dark and are excluded from PNG output. The desktop editor keeps its 1180px minimum width.
+
+Verification passed TypeScript/Vite build (`npm run build`) and the suite's 13 browser tests / 101 consistency checks, including comparison of the existing Light palette with the previous version. The 1080×1080 sample PNG was identical pixel for pixel. Preserve project archives, chart geometry, embedded fonts and document rendering when changing interface styling.
+
 ## Top Toolbar
 
 ### Open Project
@@ -60,7 +68,7 @@ Zoom only changes the editor view. It does not change the exported PNG dimension
 
 ### Selecting Slices
 
-Click a pie slice to select it. The selected slice gets a red outline in the editor only.
+Click a pie slice to select it. The editor-only outline is coral in Dark and retains its original red in Light.
 
 ### Selecting Labels
 
