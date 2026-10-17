@@ -23,6 +23,8 @@ import type { SliceGeometry } from "../lib/geometry";
 
 const HIT_FILL = "rgba(255,255,255,0.001)";
 const SELECTED_SLICE_STROKE = "#e3342f";
+// Konva needs a literal color; this matches --rf-accent for editor-only overlays.
+const DARK_EDITOR_ACCENT = "#e46544";
 const MAX_IMAGE_SCALE = 4;
 const MIN_IMAGE_SCALE = 0.01;
 const ZOOM_FACTOR = 1.08;
@@ -137,6 +139,7 @@ interface DraftZoomInputProps {
 
 interface SelectedImageTransformerProps {
   layer: SliceImageLayer | null;
+  selectionStroke: string;
   sliceId: string | null;
   targetNode: Konva.Image | null;
   transformerRef: { current: Konva.Transformer | null };
@@ -335,6 +338,7 @@ function SliceImageEditor({
 
 function SelectedImageTransformer({
   layer,
+  selectionStroke,
   sliceId,
   targetNode,
   transformerRef,
@@ -391,12 +395,12 @@ function SelectedImageTransformer({
     <Transformer
       ref={transformerRef}
       anchorCornerRadius={3}
-      anchorFill="#2f80ed"
+      anchorFill={selectionStroke}
       anchorSize={14}
       anchorStroke="#ffffff"
       anchorStrokeWidth={2}
       borderDash={[8, 6]}
-      borderStroke="#2f80ed"
+      borderStroke={selectionStroke}
       borderStrokeWidth={2}
       enabledAnchors={["top-left", "top-right", "bottom-left", "bottom-right"]}
       flipEnabled={false}
@@ -413,6 +417,7 @@ interface SliceLabelEditorProps {
   geometry: SliceGeometry;
   isSelected: boolean;
   pieChart: PieChartSettings;
+  selectionStroke: string;
   setSelectedLabelSliceId: (sliceId: string) => void;
   setSelectedSlice: (sliceId: string) => void;
   updateSlice: (sliceId: string, updates: Partial<ChartSlice>) => void;
@@ -423,6 +428,7 @@ function SliceLabelEditor({
   geometry,
   isSelected,
   pieChart,
+  selectionStroke,
   setSelectedLabelSliceId,
   setSelectedSlice,
   updateSlice,
@@ -527,12 +533,12 @@ function SliceLabelEditor({
         <Transformer
           ref={transformerRef}
           anchorCornerRadius={3}
-          anchorFill="#2f80ed"
+          anchorFill={selectionStroke}
           anchorSize={12}
           anchorStroke="#ffffff"
           anchorStrokeWidth={2}
           borderDash={[8, 6]}
-          borderStroke="#2f80ed"
+          borderStroke={selectionStroke}
           borderStrokeWidth={2}
           boundBoxFunc={(_oldBox, newBox) => ({
             ...newBox,
@@ -636,7 +642,9 @@ function DraftZoomInput({ onCommit, value }: DraftZoomInputProps) {
   );
 }
 
-export function BreakdownStage() {
+export function BreakdownStage({ theme }: { theme: "light" | "dark" }) {
+  const transformerStroke = theme === "dark" ? DARK_EDITOR_ACCENT : "#2f80ed";
+  const selectedSliceStroke = theme === "dark" ? DARK_EDITOR_ACCENT : SELECTED_SLICE_STROKE;
   const stageRef = useRef<Konva.Stage>(null);
   const viewportRef = useRef<HTMLDivElement>(null);
   const selectedImageTransformerRef = useRef<Konva.Transformer>(null);
@@ -902,6 +910,7 @@ export function BreakdownStage() {
         <div className="zoom-controls" aria-label="Preview zoom">
           <button
             className={zoomMode === "fit" ? "zoom-button-active" : ""}
+            aria-pressed={zoomMode === "fit"}
             type="button"
             onClick={() => setZoomMode("fit")}
           >
@@ -910,6 +919,7 @@ export function BreakdownStage() {
           {ZOOM_PRESETS.map((preset) => (
             <button
               className={zoomMode === "fixed" && zoomPercent === preset ? "zoom-button-active" : ""}
+              aria-pressed={zoomMode === "fixed" && zoomPercent === preset}
               key={preset}
               type="button"
               onClick={() => {
@@ -1035,7 +1045,7 @@ export function BreakdownStage() {
                         listening={false}
                         name={EDITOR_OVERLAY_NAME}
                         points={geometry.points}
-                        stroke={SELECTED_SLICE_STROKE}
+                        stroke={selectedSliceStroke}
                         strokeWidth={project.pieChart.borderWidth + 3}
                       />
                     ) : null}
@@ -1051,6 +1061,7 @@ export function BreakdownStage() {
                   isSelected={selectedLabelSliceId === geometry.slice.id}
                   key={geometry.slice.id}
                   pieChart={project.pieChart}
+                  selectionStroke={transformerStroke}
                   setSelectedLabelSliceId={setSelectedLabelSliceId}
                   setSelectedSlice={setSelectedSlice}
                   updateSlice={updateSlice}
@@ -1059,6 +1070,7 @@ export function BreakdownStage() {
             })}
             <SelectedImageTransformer
               layer={selectedImageLayer}
+              selectionStroke={transformerStroke}
               sliceId={selectedSlice?.id ?? null}
               targetNode={selectedImageNode}
               transformerRef={selectedImageTransformerRef}

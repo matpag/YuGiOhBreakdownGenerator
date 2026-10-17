@@ -277,6 +277,8 @@ export function ImageLibrarySidebar() {
         className="library-collapse-button"
         type="button"
         title={collapsed ? "Open image library" : "Collapse image library"}
+        aria-label={collapsed ? "Open image library" : "Collapse image library"}
+        aria-expanded={!collapsed}
         onClick={() => setCollapsed((isCollapsed) => !isCollapsed)}
       >
         {collapsed ? <PanelRightOpen size={18} /> : <PanelRightClose size={18} />}

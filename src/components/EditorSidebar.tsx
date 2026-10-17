@@ -384,6 +384,8 @@ export function EditorSidebar() {
         className="sidebar-collapse-button"
         type="button"
         title={collapsed ? "Open editor sidebar" : "Collapse editor sidebar"}
+        aria-label={collapsed ? "Open editor sidebar" : "Collapse editor sidebar"}
+        aria-expanded={!collapsed}
         onClick={() => setCollapsed((isCollapsed) => !isCollapsed)}
       >
         {collapsed ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={18} />}
@@ -740,6 +742,7 @@ export function EditorSidebar() {
                 <button
                   className="slice-row-select"
                   type="button"
+                  aria-pressed={project.pieChart.selectedSliceId === slice.id}
                   onClick={() => setSelectedSlice(slice.id)}
                 >
                   <span>{slice.label}</span>
@@ -826,6 +829,7 @@ export function EditorSidebar() {
                   <button
                     className="slice-layer-select"
                     type="button"
+                    aria-pressed={selectedSliceImageLayer?.id === layer.id}
                     onClick={() => setSelectedSliceImageLayer(selectedSlice.id, layer.id)}
                   >
                     <span>{layer.name}</span>
