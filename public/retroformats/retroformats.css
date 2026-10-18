@@ -1,4 +1,4 @@
-/* Retroformats visual foundation v1.0.0. Canonical copy: portal/design-system. */
+/* Retroformats visual foundation v1.1.0. Canonical copy: portal/design-system. */
 :root {
   --rf-font: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
   --rf-background: #1a234c;
@@ -67,6 +67,11 @@
   text-transform: uppercase;
 }
 .rf-suite-actions { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.rf-language-control { display: inline-flex; align-items: center; flex-shrink: 0; font-family: var(--rf-font); }
+.rf-language-control > span { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
+.rf-language-select { box-sizing: border-box; min-height: 38px; max-width: 136px; margin: 0; padding: 8px 10px; border: 1px solid var(--rf-control-border); border-radius: var(--rf-radius-control); background: var(--rf-surface); color: var(--rf-text); font-family: var(--rf-font); font-size: 12px; font-weight: 600; line-height: 1.5; letter-spacing: 0; cursor: pointer; }
+.rf-language-select:hover { background: var(--rf-surface-inset); }
+.rf-language-select:focus-visible { outline: 3px solid var(--rf-focus); outline-offset: 3px; }
 .rf-suite-switcher { position: relative; flex-shrink: 0; font-family: var(--rf-font); }
 .rf-suite-switcher > summary {
   display: inline-flex;
@@ -153,6 +158,7 @@
   .rf-brand__mark { width: 34px; height: 34px; flex-basis: 34px; }
   .rf-brand__product { font-size: 8px; letter-spacing: 1px; }
   .rf-suite-actions { gap: 8px; }
+  .rf-language-select { min-height: 36px; max-width: 120px; padding: 7px 8px; font-size: 11px; }
 }
 @media (prefers-reduced-motion: reduce) {
   .rf-suite-header *, .rf-action-primary { transition: none !important; animation: none !important; }

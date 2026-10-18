@@ -20,6 +20,7 @@ import type {
   SliceImageTransform,
 } from "../types/project";
 import type { SliceGeometry } from "../lib/geometry";
+import { useI18n } from "../i18n/I18nProvider";
 
 const HIT_FILL = "rgba(255,255,255,0.001)";
 const SELECTED_SLICE_STROKE = "#e3342f";
@@ -643,6 +644,7 @@ function DraftZoomInput({ onCommit, value }: DraftZoomInputProps) {
 }
 
 export function BreakdownStage({ theme }: { theme: "light" | "dark" }) {
+  const { t } = useI18n();
   const transformerStroke = theme === "dark" ? DARK_EDITOR_ACCENT : "#2f80ed";
   const selectedSliceStroke = theme === "dark" ? DARK_EDITOR_ACCENT : SELECTED_SLICE_STROKE;
   const stageRef = useRef<Konva.Stage>(null);
@@ -907,14 +909,14 @@ export function BreakdownStage({ theme }: { theme: "light" | "dark" }) {
   return (
     <section className="preview-pane">
       <div className="preview-toolbar">
-        <div className="zoom-controls" aria-label="Preview zoom">
+        <div className="zoom-controls" aria-label={t("zoomControls")}>
           <button
             className={zoomMode === "fit" ? "zoom-button-active" : ""}
             aria-pressed={zoomMode === "fit"}
             type="button"
             onClick={() => setZoomMode("fit")}
           >
-            Fill
+            {t("fit")}
           </button>
           {ZOOM_PRESETS.map((preset) => (
             <button
@@ -932,7 +934,7 @@ export function BreakdownStage({ theme }: { theme: "light" | "dark" }) {
           ))}
         </div>
         <label className="zoom-custom">
-          Zoom
+          {t("zoom")}
           <DraftZoomInput
             value={zoomMode === "fit" ? Math.round(fitScale * 100) : zoomPercent}
             onCommit={(nextPercent) => {

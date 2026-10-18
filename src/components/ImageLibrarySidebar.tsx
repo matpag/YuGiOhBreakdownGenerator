@@ -12,6 +12,8 @@ import {
 } from "lucide-react";
 import { fileToAsset, remoteImageToAsset, validateImageFile } from "../lib/assets";
 import { useProjectStore } from "../store/projectStore";
+import { useI18n, type UiMessage } from "../i18n/I18nProvider";
+import { describeUiError } from "../i18n/errors";
 import type { ProjectAsset } from "../types/project";
 
 const DEVIANT_ART_USERNAME = "nhociory";
@@ -34,6 +36,7 @@ interface PendingImageLibraryItem {
 }
 
 export function ImageLibrarySidebar() {
+  const { t, message } = useI18n();
   const project = useProjectStore((state) => state.project);
   const assets = useProjectStore((state) => state.assets);
   const addAsset = useProjectStore((state) => state.addAsset);
@@ -48,10 +51,10 @@ export function ImageLibrarySidebar() {
   const [artworkSearchStatus, setArtworkSearchStatus] = useState<
     "idle" | "loading" | "ready" | "error"
   >("idle");
-  const [artworkSearchError, setArtworkSearchError] = useState<string | null>(null);
+  const [artworkSearchError, setArtworkSearchError] = useState<UiMessage | null>(null);
   const [addingArtworkId, setAddingArtworkId] = useState<string | null>(null);
   const [addedArtworkIds, setAddedArtworkIds] = useState<Set<string>>(() => new Set());
-  const [imageUploadError, setImageUploadError] = useState<string | null>(null);
+  const [imageUploadError, setImageUploadError] = useState<UiMessage | null>(null);
   const [imageLibrarySearch, setImageLibrarySearch] = useState("");
   const [renameDialogItemId, setRenameDialogItemId] = useState<string | null>(null);
   const [renameDialogName, setRenameDialogName] = useState("");
@@ -105,7 +108,7 @@ export function ImageLibrarySidebar() {
     const errors = files.map(validateImageFile).filter((error): error is string => error !== null);
 
     if (errors.length > 0) {
-      setImageUploadError(errors[0]);
+      setImageUploadError(describeUiError(errors[0], "readImageError"));
       return;
     }
 
@@ -118,7 +121,7 @@ export function ImageLibrarySidebar() {
         enqueueImageLibraryAsset(asset);
       }
     } catch (error) {
-      setImageUploadError(error instanceof Error ? error.message : "Could not read image file.");
+      setImageUploadError(describeUiError(error, "readImageError"));
     }
   }
 
@@ -233,7 +236,7 @@ export function ImageLibrarySidebar() {
       setArtworkSearchResults([]);
       setArtworkSearchPage(0);
       setArtworkSearchStatus("error");
-      setArtworkSearchError(error instanceof Error ? error.message : "Image search failed.");
+      setArtworkSearchError(describeUiError(error, "imageSearchError"));
     }
   }
 
@@ -265,7 +268,7 @@ export function ImageLibrarySidebar() {
         nextIds.delete(result.id);
         return nextIds;
       });
-      setArtworkSearchError(error instanceof Error ? error.message : "Could not add artwork.");
+      setArtworkSearchError(describeUiError(error, "addArtworkError"));
     } finally {
       setAddingArtworkId(null);
     }
@@ -276,8 +279,8 @@ export function ImageLibrarySidebar() {
       <button
         className="library-collapse-button"
         type="button"
-        title={collapsed ? "Open image library" : "Collapse image library"}
-        aria-label={collapsed ? "Open image library" : "Collapse image library"}
+        title={t(collapsed ? "openLibrary" : "closeLibrary")}
+        aria-label={t(collapsed ? "openLibrary" : "closeLibrary")}
         aria-expanded={!collapsed}
         onClick={() => setCollapsed((isCollapsed) => !isCollapsed)}
       >
@@ -287,7 +290,7 @@ export function ImageLibrarySidebar() {
       {collapsed ? null : (
         <div className="library-content-stack">
           <section className="panel image-searcher-panel">
-            <h2>Image Searcher</h2>
+            <h2>{t("imageSearch")}</h2>
             <form
               className="image-search-form"
               onSubmit={(event) => {
@@ -296,22 +299,22 @@ export function ImageLibrarySidebar() {
               }}
             >
               <label>
-                Card name
+                {t("cardName")}
                 <input
                   type="search"
-                  placeholder="Thunder King"
+                  placeholder={t("cardExample")}
                   value={artworkSearchQuery}
                   onChange={(event) => setArtworkSearchQuery(event.target.value)}
                 />
               </label>
               <button type="submit" disabled={artworkSearchStatus === "loading"}>
                 <Search size={16} />
-                {artworkSearchStatus === "loading" ? "Searching" : "Search"}
+                {t(artworkSearchStatus === "loading" ? "searching" : "search")}
               </button>
               <button
                 className="icon-button image-search-clear-button"
                 type="button"
-                title="Clear image search"
+                title={t("clearImageSearch")}
                 disabled={
                   !artworkSearchQuery &&
                   artworkSearchResults.length === 0 &&
@@ -324,33 +327,32 @@ export function ImageLibrarySidebar() {
             </form>
             {artworkSearchQuery.trim() ? (
               <a className="image-search-source" href={artworkSearchUrl} target="_blank" rel="noreferrer">
-                Open DeviantArt search
+                {t("openDeviantArt")}
               </a>
             ) : null}
-            {artworkSearchError ? <p className="field-error">{artworkSearchError}</p> : null}
+            {artworkSearchError ? <p className="field-error">{message(artworkSearchError)}</p> : null}
             {artworkSearchResults.length > IMAGE_SEARCH_RESULTS_PER_PAGE ? (
               <div className="image-search-pagination">
                 <button
                   className="icon-button"
                   type="button"
-                  title="Previous image search page"
+                  title={t("previousSearchPage")}
                   disabled={artworkSearchPage === 0}
                   onClick={() => setArtworkSearchPage((page) => Math.max(0, page - 1))}
                 >
                   <ChevronLeft size={15} />
                 </button>
                 <span>
-                  {artworkSearchPageStart + 1}-
-                  {Math.min(
-                    artworkSearchPageStart + IMAGE_SEARCH_RESULTS_PER_PAGE,
-                    artworkSearchResults.length,
-                  )}{" "}
-                  of {artworkSearchResults.length}
+                  {t("searchRange", {
+                    first: artworkSearchPageStart + 1,
+                    last: Math.min(artworkSearchPageStart + IMAGE_SEARCH_RESULTS_PER_PAGE, artworkSearchResults.length),
+                    total: artworkSearchResults.length,
+                  })}
                 </span>
                 <button
                   className="icon-button"
                   type="button"
-                  title="Next image search page"
+                  title={t("nextSearchPage")}
                   disabled={artworkSearchPage >= artworkSearchPageCount - 1}
                   onClick={() =>
                     setArtworkSearchPage((page) => Math.min(artworkSearchPageCount - 1, page + 1))
@@ -379,10 +381,10 @@ export function ImageLibrarySidebar() {
                       >
                         <ImagePlus size={15} />
                         {isAddingArtwork
-                          ? "Adding"
+                          ? t("adding")
                           : isArtworkAdded
-                            ? "Added"
-                            : "Add to Library"}
+                            ? t("added")
+                            : t("addToLibrary")}
                       </button>
                     </div>
                   </article>
@@ -390,16 +392,16 @@ export function ImageLibrarySidebar() {
               })}
             </div>
             {artworkSearchStatus === "ready" && artworkSearchResults.length === 0 ? (
-              <p className="empty-state">No artwork results found.</p>
+              <p className="empty-state">{t("noArtworkResults")}</p>
             ) : null}
           </section>
 
           <section className="panel library-panel">
             <div className="panel-heading-row">
-              <h2>Image Library</h2>
+              <h2>{t("imageLibrary")}</h2>
               <label className="file-button">
                 <ImagePlus size={16} />
-                Add
+                {t("add")}
                 <input
                   type="file"
                   accept="image/*"
@@ -411,12 +413,12 @@ export function ImageLibrarySidebar() {
                 />
               </label>
             </div>
-            {imageUploadError ? <p className="field-error">{imageUploadError}</p> : null}
+            {imageUploadError ? <p className="field-error">{message(imageUploadError)}</p> : null}
             <label>
-              Search
+              {t("search")}
               <input
                 type="search"
-                placeholder="Find by image name"
+                placeholder={t("findImage")}
                 value={imageLibrarySearch}
                 onChange={(event) => setImageLibrarySearch(event.target.value)}
               />
@@ -438,7 +440,7 @@ export function ImageLibrarySidebar() {
                         <button
                           className="icon-button"
                           type="button"
-                          title="Rename image"
+                          title={t("renameImage")}
                           onClick={() => startRenaming(item.id, item.name)}
                         >
                           <Pencil size={13} />
@@ -447,7 +449,7 @@ export function ImageLibrarySidebar() {
                       <div className="asset-card-actions">
                         <button
                           type="button"
-                          title="Use on selected slice"
+                          title={t("useOnSlice")}
                           disabled={!selectedSlice}
                           onClick={() => {
                             if (selectedSlice) {
@@ -455,12 +457,12 @@ export function ImageLibrarySidebar() {
                             }
                           }}
                         >
-                          Slice
+                          {t("slice")}
                         </button>
                         <button
                           className="icon-button"
                           type="button"
-                          title="Remove from library"
+                          title={t("removeLibrary")}
                           onClick={() => removeImageLibraryItem(item.id)}
                         >
                           <Trash2 size={15} />
@@ -472,7 +474,7 @@ export function ImageLibrarySidebar() {
               })}
             </div>
             {filteredImageLibrary.length === 0 ? (
-              <p className="empty-state">No images match this search.</p>
+              <p className="empty-state">{t("noImageResults")}</p>
             ) : null}
           </section>
         </div>
@@ -497,9 +499,9 @@ export function ImageLibrarySidebar() {
               commitRename(renameDialogItem.id);
             }}
           >
-            <h2 id="rename-image-title">Rename Image</h2>
+            <h2 id="rename-image-title">{t("renameImage")}</h2>
             <label>
-              Image name
+              {t("imageName")}
               <input
                 autoFocus
                 value={renameDialogName}
@@ -514,10 +516,10 @@ export function ImageLibrarySidebar() {
             </label>
             <div className="dialog-actions">
               <button type="button" onClick={cancelRenaming}>
-                Cancel
+                {t("cancel")}
               </button>
               <button type="submit" disabled={!renameDialogName.trim()}>
-                Save
+                {t("save")}
               </button>
             </div>
           </form>
@@ -543,9 +545,9 @@ export function ImageLibrarySidebar() {
               commitPendingImageDialog();
             }}
           >
-            <h2 id="name-image-title">Name Image</h2>
+            <h2 id="name-image-title">{t("nameImage")}</h2>
             <label>
-              Image name
+              {t("imageName")}
               <input
                 autoFocus
                 value={pendingImageName}
@@ -560,10 +562,10 @@ export function ImageLibrarySidebar() {
             </label>
             <div className="dialog-actions">
               <button type="button" onClick={cancelPendingImageDialog}>
-                Cancel
+                {t("cancel")}
               </button>
               <button type="submit" disabled={!pendingImageName.trim()}>
-                Add
+                {t("add")}
               </button>
             </div>
           </form>

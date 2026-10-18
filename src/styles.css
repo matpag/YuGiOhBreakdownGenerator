@@ -189,7 +189,7 @@ textarea {
 
 .app-shell {
   display: grid;
-  grid-template-rows: 72px 1fr;
+  grid-template-rows: auto minmax(0, 1fr);
   height: 100vh;
   min-height: 100vh;
   overflow: hidden;
@@ -204,6 +204,7 @@ textarea {
   padding: 0 22px;
   position: relative;
   z-index: 5;
+  min-height: 72px;
 }
 
 .topbar h1 {
@@ -227,8 +228,9 @@ textarea {
   gap: 2px;
   justify-self: center;
   line-height: 1.2;
-  max-width: min(260px, 24vw);
-  min-width: 150px;
+  max-width: 180px;
+  min-width: 0;
+  flex: 1 1 100px;
   padding: 7px 12px;
 }
 
@@ -236,6 +238,9 @@ textarea {
 .open-file-status small {
   color: var(--text-subtle);
   font-size: 11px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .open-file-status strong {
@@ -254,6 +259,18 @@ textarea {
 
 .project-toolbar {
   flex-shrink: 0;
+  gap: 6px;
+}
+
+.topbar .rf-language-control {
+  flex-shrink: 0;
+  min-width: 0;
+}
+
+.topbar .rf-language-select {
+  width: 108px;
+  min-height: 36px;
+  font-size: 12px;
 }
 
 .project-toolbar > button:not(.rf-action-primary) {
@@ -269,7 +286,7 @@ textarea {
 }
 
 .theme-toggle {
-  min-width: 92px;
+  min-width: 76px;
   justify-content: center;
 }
 

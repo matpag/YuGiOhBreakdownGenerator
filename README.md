@@ -1,5 +1,15 @@
 # Deck Breakdown Maker
 
+## Interface languages
+
+The complete interface supports English, Italiano, Deutsch, Español and Français through React dictionaries in `src/i18n/locales/`. Use the compact language selector in the header. Initial language priority is a valid `ui_lang` URL parameter, then `retroformats-ui-language` in localStorage, then the first supported entry in `navigator.languages`, then English. Supported URL/storage values are exactly `en`, `it`, `de`, `es`, `fr`; storage access failures do not prevent editing.
+
+Changing language saves the preference, updates the HTML language and the current URL with `history.replaceState`, and preserves other query parameters, hashes and history state. The suite navigation carries `ui_lang` to the destination. Translations cover labels, accessible names, tooltips, dialogs, errors, file-picker descriptions, font-weight controls and zoom. Existing errors use message descriptors so they update with the selected language.
+
+Project content, user filenames and names, font-family names, `.dhbreakdown` data, chart coordinates and the PNG renderer are independent of interface language. Switching language keeps the current project, numeric drafts, selections, theme and output. Native browser/file-picker chrome follows the browser or operating-system language; app-supplied descriptions are translated.
+
+Run `npm run test:i18n` for dictionary/placeholder completeness, language resolution, storage failure handling, URL propagation, error descriptors and untranslated JSX detection, then `npm run build`. Browser verification should also switch all five languages with an edited project, reload to verify preference precedence, exercise dialogs/errors and compare PNG output across languages and both existing themes.
+
 Live demo: https://matpag.github.io/YuGiOhBreakdownGenerator/
 
 Deck Breakdown Maker is a browser-based editor for creating Yu-Gi-Oh deck breakdown graphics. It runs locally in your browser, lets you build a reusable project, and exports the final composition as a PNG.

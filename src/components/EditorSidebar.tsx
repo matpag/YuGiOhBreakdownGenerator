@@ -1,4 +1,4 @@
-import { Fragment, type DragEvent, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { Fragment, type DragEvent, useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import {
   ArrowDown,
@@ -20,6 +20,8 @@ import {
 } from "../lib/fonts";
 import { DEFAULT_LABEL_DISTANCE } from "../lib/geometry";
 import { useProjectStore } from "../store/projectStore";
+import { useI18n, type UiMessage } from "../i18n/I18nProvider";
+import { describeUiError } from "../i18n/errors";
 
 const FALLBACK_FONT_OPTIONS = [
   "Berlin Sans FB",
@@ -40,16 +42,16 @@ const FALLBACK_FONT_OPTIONS = [
 ];
 
 const FONT_WEIGHT_OPTIONS = [
-  { label: "Thin", value: "100" },
-  { label: "Extra Light", value: "200" },
-  { label: "Light", value: "300" },
-  { label: "Regular", value: "400" },
-  { label: "Medium", value: "500" },
-  { label: "Semi Bold", value: "600" },
-  { label: "Bold", value: "700" },
-  { label: "Extra Bold", value: "800" },
-  { label: "Black", value: "900" },
-];
+  { labelKey: "weight100", value: "100" },
+  { labelKey: "weight200", value: "200" },
+  { labelKey: "weight300", value: "300" },
+  { labelKey: "weight400", value: "400" },
+  { labelKey: "weight500", value: "500" },
+  { labelKey: "weight600", value: "600" },
+  { labelKey: "weight700", value: "700" },
+  { labelKey: "weight800", value: "800" },
+  { labelKey: "weight900", value: "900" },
+] as const;
 
 interface LocalFontData {
   family: string;
@@ -89,6 +91,7 @@ declare global {
 }
 
 export function EditorSidebar() {
+  const { t, message } = useI18n();
   const project = useProjectStore((state) => state.project);
   const assets = useProjectStore((state) => state.assets);
   const updateCanvas = useProjectStore((state) => state.updateCanvas);
@@ -124,7 +127,8 @@ export function EditorSidebar() {
   );
   const [collapsed, setCollapsed] = useState(false);
   const [fontAccessRequested, setFontAccessRequested] = useState(false);
-  const [imageUploadError, setImageUploadError] = useState<string | null>(null);
+  const [imageUploadError, setImageUploadError] = useState<UiMessage | null>(null);
+  const [fontUploadError, setFontUploadError] = useState<UiMessage | null>(null);
   const [draggingSliceId, setDraggingSliceId] = useState<string | null>(null);
   const [dragPreviewSliceIds, setDragPreviewSliceIds] = useState<string[] | null>(null);
   const sliceRowRefs = useRef<Map<string, HTMLDivElement>>(new Map());
@@ -184,12 +188,13 @@ export function EditorSidebar() {
     const error = validateImageFile(file);
 
     if (error) {
-      setImageUploadError(error);
+      setImageUploadError(describeUiError(error, "readImageError"));
       return;
     }
 
     setImageUploadError(null);
 
+    try {
     const asset = await fileToAsset(file);
     const assetId = addAsset(asset);
 
@@ -211,6 +216,9 @@ export function EditorSidebar() {
     } else if (target === "slice" && sliceId) {
       setSliceAsset(sliceId, assetId);
     }
+    } catch (error) {
+      setImageUploadError(describeUiError(error, "readImageError"));
+    }
   }
 
   async function handleFontUpload(file: File | undefined) {
@@ -219,12 +227,14 @@ export function EditorSidebar() {
     }
 
     const inferredFamily = inferFontFamilyFromFileName(file.name);
-    const family = window.prompt("Font family name", inferredFamily)?.trim();
+    const family = window.prompt(t("fontFamilyName"), inferredFamily)?.trim();
 
     if (!family) {
       return;
     }
 
+    setFontUploadError(null);
+    try {
     const asset = await fileToAsset(file);
     const assetId = addAsset(asset);
     const embeddedFont = {
@@ -236,6 +246,9 @@ export function EditorSidebar() {
     addEmbeddedFont(embeddedFont);
     await registerEmbeddedFont(embeddedFont, asset);
     setFontOptions((currentOptions) => mergeFontOptions([...currentOptions, family]));
+    } catch (error) {
+      setFontUploadError(describeUiError(error, "readFontError"));
+    }
   }
 
   function setSliceRowRef(sliceId: string, node: HTMLDivElement | null) {
@@ -383,8 +396,8 @@ export function EditorSidebar() {
       <button
         className="sidebar-collapse-button"
         type="button"
-        title={collapsed ? "Open editor sidebar" : "Collapse editor sidebar"}
-        aria-label={collapsed ? "Open editor sidebar" : "Collapse editor sidebar"}
+        title={t(collapsed ? "openEditor" : "closeEditor")}
+        aria-label={t(collapsed ? "openEditor" : "closeEditor")}
         aria-expanded={!collapsed}
         onClick={() => setCollapsed((isCollapsed) => !isCollapsed)}
       >
@@ -394,10 +407,10 @@ export function EditorSidebar() {
       {collapsed ? null : (
         <>
       <section className="panel">
-        <h2>Canvas</h2>
+        <h2>{t("canvas")}</h2>
         <div className="field-row">
           <label>
-            Width
+            {t("width")}
             <DraftNumberInput
               min={1}
               step={1}
@@ -406,7 +419,7 @@ export function EditorSidebar() {
             />
           </label>
           <label>
-            Height
+            {t("height")}
             <DraftNumberInput
               min={1}
               step={1}
@@ -418,16 +431,16 @@ export function EditorSidebar() {
       </section>
 
       <section className="panel">
-        <h2>Title</h2>
+        <h2>{t("title")}</h2>
         <label>
-          Text
+          {t("text")}
           <textarea value={project.title.text} onChange={(event) => setTitle(event.target.value)} />
         </label>
         <div className="field-row">
           <div className="field-label">
-            <span>Font</span>
+            <span>{t("font")}</span>
             <FontSelect
-              label="Font"
+              label={t("font")}
               value={project.title.fontFamily}
               options={fontOptions}
               onOpen={loadSystemFonts}
@@ -435,21 +448,21 @@ export function EditorSidebar() {
             />
           </div>
           <label>
-            Font weight
+            {t("fontWeight")}
             <select
               value={project.title.fontWeight}
               onChange={(event) => updateTitle({ fontWeight: event.target.value })}
             >
               {FONT_WEIGHT_OPTIONS.map((fontWeight) => (
                 <option key={fontWeight.value} value={fontWeight.value}>
-                  {fontWeight.label}
+                  {t(fontWeight.labelKey)}
                 </option>
               ))}
             </select>
           </label>
         </div>
         <label>
-          Size
+          {t("size")}
           <DraftNumberInput
             min={8}
             value={project.title.fontSize}
@@ -462,14 +475,14 @@ export function EditorSidebar() {
         </label>
         <div className="field-row">
           <div className="field-label">
-            <span>Text color</span>
+            <span>{t("textColor")}</span>
             <ColorInput
               value={project.title.fill}
               onCommit={(fill) => updateTitle({ fill })}
             />
           </div>
           <div className="field-label">
-            <span>Stroke color</span>
+            <span>{t("strokeColor")}</span>
             <ColorInput
               value={project.title.stroke}
               onCommit={(stroke) => updateTitle({ stroke })}
@@ -478,7 +491,7 @@ export function EditorSidebar() {
         </div>
         <div className="field-row">
           <label>
-            Stroke width
+            {t("strokeWidth")}
             <DraftNumberInput
               min={0}
               value={project.title.strokeWidth}
@@ -490,7 +503,7 @@ export function EditorSidebar() {
             />
           </label>
           <label>
-            Y
+            {t("y")}
             <DraftNumberInput
               value={project.title.y}
               onCommit={(y) =>
@@ -504,16 +517,16 @@ export function EditorSidebar() {
       </section>
 
       <section className="panel">
-        <h2>Static Images</h2>
-        {imageUploadError ? <p className="field-error">{imageUploadError}</p> : null}
+        <h2>{t("staticImages")}</h2>
+        {imageUploadError ? <p className="field-error">{message(imageUploadError)}</p> : null}
         <div className="asset-control">
           <span>
-            Background
-            <small>{backgroundAsset?.name ?? "No image selected"}</small>
+            {t("background")}
+            <small>{backgroundAsset?.name ?? t("noImage")}</small>
           </span>
           <label className="file-button">
             <ImagePlus size={16} />
-            Upload
+            {t("upload")}
             <input
               type="file"
               accept="image/*"
@@ -527,19 +540,20 @@ export function EditorSidebar() {
       </section>
 
       <section className="panel">
-        <h2>Embedded Fonts</h2>
+        <h2>{t("embeddedFonts")}</h2>
+        {fontUploadError ? <p className="field-error">{message(fontUploadError)}</p> : null}
         <div className="asset-control">
           <span>
-            Project fonts
+            {t("projectFonts")}
             <small>
               {project.fonts.length > 0
                 ? project.fonts.map((font) => font.family).join(", ")
-                : "No embedded fonts"}
+                : t("noFonts")}
             </small>
           </span>
           <label className="file-button">
             <ImagePlus size={16} />
-            Upload
+            {t("upload")}
             <input
               type="file"
               accept={FONT_FILE_ACCEPT}
@@ -553,17 +567,17 @@ export function EditorSidebar() {
       </section>
 
       <section className="panel">
-        <h2>Chart</h2>
+        <h2>{t("chart")}</h2>
         <div className="field-row">
           <label>
-            X
+            {t("x")}
             <DraftNumberInput
               value={project.pieChart.x}
               onCommit={(x) => updatePieChart({ x })}
             />
           </label>
           <label>
-            Y
+            {t("y")}
             <DraftNumberInput
               value={project.pieChart.y}
               onCommit={(y) => updatePieChart({ y })}
@@ -572,7 +586,7 @@ export function EditorSidebar() {
         </div>
         <div className="field-row">
           <label>
-            Radius
+            {t("radius")}
             <DraftNumberInput
               min={80}
               value={project.pieChart.radius}
@@ -584,7 +598,7 @@ export function EditorSidebar() {
             />
           </label>
           <label>
-            Chart stroke width
+            {t("chartStrokeWidth")}
             <DraftNumberInput
               min={0}
               value={project.pieChart.borderWidth}
@@ -598,9 +612,9 @@ export function EditorSidebar() {
         </div>
         <div className="field-row">
           <div className="field-label">
-            <span>Label font</span>
+            <span>{t("labelFont")}</span>
             <FontSelect
-              label="Label font"
+              label={t("labelFont")}
               value={project.pieChart.labelStyle.fontFamily}
               options={fontOptions}
               onOpen={loadSystemFonts}
@@ -615,7 +629,7 @@ export function EditorSidebar() {
             />
           </div>
           <label>
-            Label font weight
+            {t("labelFontWeight")}
             <select
               value={project.pieChart.labelStyle.fontWeight}
               onChange={(event) =>
@@ -629,14 +643,14 @@ export function EditorSidebar() {
             >
               {FONT_WEIGHT_OPTIONS.map((fontWeight) => (
                 <option key={fontWeight.value} value={fontWeight.value}>
-                  {fontWeight.label}
+                  {t(fontWeight.labelKey)}
                 </option>
               ))}
             </select>
           </label>
         </div>
         <label>
-          Label size
+          {t("labelSize")}
           <DraftNumberInput
             min={1}
             value={project.pieChart.labelStyle.fontSize}
@@ -652,7 +666,7 @@ export function EditorSidebar() {
         </label>
         <div className="field-row">
           <div className="field-label">
-            <span>Label text color</span>
+            <span>{t("labelTextColor")}</span>
             <ColorInput
               value={project.pieChart.labelStyle.fill}
               onCommit={(fill) =>
@@ -666,7 +680,7 @@ export function EditorSidebar() {
             />
           </div>
           <div className="field-label">
-            <span>Label stroke color</span>
+            <span>{t("labelStrokeColor")}</span>
             <ColorInput
               value={project.pieChart.labelStyle.stroke}
               onCommit={(stroke) =>
@@ -681,7 +695,7 @@ export function EditorSidebar() {
           </div>
         </div>
         <label>
-          Label stroke width
+          {t("labelStrokeWidth")}
           <DraftNumberInput
             min={0}
             value={project.pieChart.labelStyle.strokeWidth}
@@ -697,16 +711,16 @@ export function EditorSidebar() {
         </label>
         <button type="button" onClick={resetChartLabelsAndImages}>
           <RotateCcw size={16} />
-          Reset all labels and images
+          {t("resetAll")}
         </button>
       </section>
 
       <section className="panel">
-        <h2>Slices</h2>
+        <h2>{t("slices")}</h2>
         <div className="topbar-actions">
           <button type="button" onClick={addSlice}>
             <Plus size={16} />
-            Add
+            {t("add")}
           </button>
         </div>
         <div
@@ -730,7 +744,7 @@ export function EditorSidebar() {
                 } ${draggingSliceId === slice.id ? "slice-row-dragging" : ""
                 }`}
                 draggable
-                title="Drag to reorder"
+                title={t("dragReorder")}
                 onDragEnd={() => {
                   setDraggingSliceId(null);
                   setDragPreviewSliceIds(null);
@@ -751,7 +765,7 @@ export function EditorSidebar() {
                 <button
                   className="icon-button slice-row-delete"
                   type="button"
-                  title={`Delete ${slice.label}`}
+                  title={t("deleteName", { name: slice.label })}
                   onClick={() => removeSlice(slice.id)}
                 >
                   <Trash2 size={15} />
@@ -764,16 +778,16 @@ export function EditorSidebar() {
 
       {selectedSlice ? (
         <section className="panel">
-          <h2>Selected Slice</h2>
+          <h2>{t("selectedSlice")}</h2>
           <label>
-            Label
+            {t("label")}
             <input
               value={selectedSlice.label}
               onChange={(event) => updateSlice(selectedSlice.id, { label: event.target.value })}
             />
           </label>
           <label>
-            Slice value
+            {t("sliceValue")}
             <DraftNumberInput
               min={1}
               value={selectedSlice.value}
@@ -785,7 +799,7 @@ export function EditorSidebar() {
             />
           </label>
           <label>
-            Label distance
+            {t("labelDistance")}
             <DraftNumberInput
               min={0}
               value={selectedSlice.labelDistance ?? DEFAULT_LABEL_DISTANCE}
@@ -802,17 +816,17 @@ export function EditorSidebar() {
               onClick={() => updateSlice(selectedSlice.id, { labelBox: undefined })}
             >
               <RotateCcw size={16} />
-              Reset label position
+              {t("resetLabel")}
             </button>
           ) : null}
           <div className="slice-layer-header">
-            <h3>Slice Images</h3>
+            <h3>{t("sliceImages")}</h3>
             <button
               type="button"
               onClick={() => addSliceImageLayer(selectedSlice.id)}
             >
               <Plus size={16} />
-              Add image
+              {t("addImage")}
             </button>
           </div>
           <div className="slice-layer-list">
@@ -833,9 +847,9 @@ export function EditorSidebar() {
                     onClick={() => setSelectedSliceImageLayer(selectedSlice.id, layer.id)}
                   >
                     <span>{layer.name}</span>
-                    <small>{layerAsset?.name ?? "No image selected"}</small>
+                    <small>{layerAsset?.name ?? t("noImage")}</small>
                   </button>
-                  <label className="slice-layer-upload" title={`Upload ${layer.name}`}>
+                  <label className="slice-layer-upload" title={t("uploadName", { name: layer.name })}>
                     <ImagePlus size={15} />
                     <input
                       type="file"
@@ -854,7 +868,7 @@ export function EditorSidebar() {
                   <button
                     className="icon-button"
                     type="button"
-                    title="Move image down"
+                    title={t("moveImageDown")}
                     disabled={index === selectedSlice.imageLayers.length - 1}
                     onClick={() => moveSliceImageLayer(selectedSlice.id, layer.id, 1)}
                   >
@@ -863,7 +877,7 @@ export function EditorSidebar() {
                   <button
                     className="icon-button"
                     type="button"
-                    title="Move image up"
+                    title={t("moveImageUp")}
                     disabled={index === 0}
                     onClick={() => moveSliceImageLayer(selectedSlice.id, layer.id, -1)}
                   >
@@ -874,8 +888,8 @@ export function EditorSidebar() {
                     type="button"
                     title={
                       selectedSlice.imageLayers.length <= 1
-                        ? "Clear image"
-                        : "Remove image layer"
+                        ? t("clearImage")
+                        : t("removeLayer")
                     }
                     disabled={selectedSlice.imageLayers.length <= 1 && !layer.assetId}
                     onClick={() => removeSliceImageLayer(selectedSlice.id, layer.id)}
@@ -890,7 +904,7 @@ export function EditorSidebar() {
             <>
               <div className="field-row">
                 <label>
-                  Scale
+                  {t("scale")}
                   <DraftNumberInput
                     min={0.01}
                     step={0.01}
@@ -903,7 +917,7 @@ export function EditorSidebar() {
                   />
                 </label>
                 <label>
-                  Rotation
+                  {t("rotation")}
                   <DraftNumberInput
                     step={1}
                     value={selectedSliceImageLayer.imageTransform.rotation}
@@ -917,7 +931,7 @@ export function EditorSidebar() {
               </div>
               <div className="field-row">
                 <label>
-                  X
+                  {t("x")}
                   <DraftNumberInput
                     value={selectedSliceImageLayer.imageTransform.x}
                     onCommit={(x) =>
@@ -928,7 +942,7 @@ export function EditorSidebar() {
                   />
                 </label>
                 <label>
-                  Y
+                  {t("y")}
                   <DraftNumberInput
                     value={selectedSliceImageLayer.imageTransform.y}
                     onCommit={(y) =>
@@ -950,6 +964,7 @@ export function EditorSidebar() {
 }
 
 function ColorInput({ onCommit, value }: ColorInputProps) {
+  const { t } = useI18n();
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -989,7 +1004,7 @@ function ColorInput({ onCommit, value }: ColorInputProps) {
         className="color-picker-button"
         type="button"
         title={value}
-        aria-label={`Choose color ${value}`}
+        aria-label={t("chooseColor", { value })}
         style={{ backgroundColor: value }}
         onClick={(event) => {
           event.preventDefault();
@@ -1003,13 +1018,14 @@ function ColorInput({ onCommit, value }: ColorInputProps) {
 }
 
 function FontSelect({ label, onChange, onOpen, options, value }: FontSelectProps) {
+  const { t } = useI18n();
+  const menuId = useId();
   const inputRef = useRef<HTMLInputElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const skipNextFocusOpenRef = useRef(false);
   const [isOpen, setIsOpen] = useState(false);
   const [query, setQuery] = useState(value);
   const [menuPosition, setMenuPosition] = useState<FontMenuPosition | null>(null);
-  const menuId = `${label.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-menu`;
   const availableOptions = mergeFontOptions([...options, value]);
   const normalizedQuery = query.trim().toLowerCase();
   const filteredOptions = normalizedQuery
@@ -1229,7 +1245,7 @@ function FontSelect({ label, onChange, onOpen, options, value }: FontSelectProps
                   </button>
                 ))
               ) : (
-                <div className="font-select-empty">No fonts found</div>
+                <div className="font-select-empty">{t("noFontResults")}</div>
               )}
             </div>,
             document.body,

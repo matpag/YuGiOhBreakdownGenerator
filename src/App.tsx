@@ -10,22 +10,24 @@ import {
   importBreakdownDocument,
 } from "./lib/projectArchive";
 import { useProjectStore } from "./store/projectStore";
+import { LanguageSelect, useI18n, type TranslationKey, type UiMessage } from "./i18n/I18nProvider";
+import { describeUiError } from "./i18n/errors";
 
 type Theme = "light" | "dark";
 type BusyAction = "opening" | "saving";
 type Notice = {
   id: number;
-  message: string;
+  message: UiMessage;
 };
 
-const BUSY_MESSAGES: Record<BusyAction, string> = {
-  opening: "Opening project...",
-  saving: "Saving project...",
+const BUSY_MESSAGES: Record<BusyAction, TranslationKey> = {
+  opening: "opening",
+  saving: "saving",
 };
 const PROJECT_FILE_EXTENSION = ".dhbreakdown";
-const PROJECT_FILE_PICKER_TYPES = [
+const projectFilePickerTypes = (description: string) => [
   {
-    description: "Deck Breakdown project",
+    description,
     accept: {
       [BREAKDOWN_ARCHIVE_MIME_TYPE]: [PROJECT_FILE_EXTENSION],
       "application/zip": [PROJECT_FILE_EXTENSION],
@@ -34,6 +36,7 @@ const PROJECT_FILE_PICKER_TYPES = [
 ];
 
 export default function App() {
+  const { t, message: renderMessage, suiteUrl } = useI18n();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [busyAction, setBusyAction] = useState<BusyAction | null>(null);
   const [fileHandle, setFileHandle] = useState<FileSystemFileHandle | null>(null);
@@ -41,21 +44,22 @@ export default function App() {
   const [openedProjectFileName, setOpenedProjectFileName] = useState<string | null>(null);
   const [pngPreviewUrl, setPngPreviewUrl] = useState<string | null>(null);
   const [saveVersion, setSaveVersion] = useState(1);
-  const [theme, setTheme] = useState<Theme>(() =>
-    window.localStorage.getItem("deck-breakdown-maker-theme") === "light" ? "light" : "dark",
-  );
+  const [theme, setTheme] = useState<Theme>(() => {
+    try { return window.localStorage.getItem("deck-breakdown-maker-theme") === "light" ? "light" : "dark"; }
+    catch { return "dark"; }
+  });
   const project = useProjectStore((state) => state.project);
   const assets = useProjectStore((state) => state.assets);
   const loadDocument = useProjectStore((state) => state.loadDocument);
   const exportPng = useProjectStore((state) => state.exportPng);
 
   useEffect(() => {
-    registerEmbeddedFonts(project.fonts, assets);
+    registerEmbeddedFonts(project.fonts, assets).catch((error) => showNotice(describeUiError(error, "readFontError")));
   }, [assets, project.fonts]);
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
-    window.localStorage.setItem("deck-breakdown-maker-theme", theme);
+    try { window.localStorage.setItem("deck-breakdown-maker-theme", theme); } catch { /* Keep theme usable without storage. */ }
   }, [theme]);
 
   useEffect(() => {
@@ -93,7 +97,7 @@ export default function App() {
     return () => window.clearTimeout(timeoutId);
   }, [notice]);
 
-  function showNotice(message: string) {
+  function showNotice(message: UiMessage) {
     setNotice({ id: Date.now(), message });
   }
 
@@ -116,7 +120,7 @@ export default function App() {
         return;
       }
 
-      window.alert(error instanceof Error ? error.message : "Could not save the project.");
+      window.alert(renderMessage(describeUiError(error, "saveProjectError")));
     } finally {
       setBusyAction(null);
     }
@@ -135,7 +139,7 @@ export default function App() {
         return;
       }
 
-      window.alert(error instanceof Error ? error.message : "Could not save the project.");
+      window.alert(renderMessage(describeUiError(error, "saveProjectError")));
     } finally {
       setBusyAction(null);
     }
@@ -155,7 +159,7 @@ export default function App() {
       const [handle] = await window.showOpenFilePicker!({
         excludeAcceptAllOption: false,
         multiple: false,
-        types: PROJECT_FILE_PICKER_TYPES,
+        types: projectFilePickerTypes(t("projectFileType")),
       });
 
       if (!handle) {
@@ -169,7 +173,7 @@ export default function App() {
         return;
       }
 
-      window.alert(error instanceof Error ? error.message : "Could not open the project.");
+      window.alert(renderMessage(describeUiError(error, "openProjectError")));
     } finally {
       setBusyAction(null);
     }
@@ -187,7 +191,7 @@ export default function App() {
 
       await openProjectFile(file, null);
     } catch (error) {
-      window.alert(error instanceof Error ? error.message : "Could not open the project.");
+      window.alert(renderMessage(describeUiError(error, "openProjectError")));
     } finally {
       setBusyAction(null);
     }
@@ -207,7 +211,7 @@ export default function App() {
       const handle = await window.showSaveFilePicker!({
         excludeAcceptAllOption: false,
         suggestedName: openedProjectFileName ?? projectFileName(project.title.text),
-        types: PROJECT_FILE_PICKER_TYPES,
+        types: projectFilePickerTypes(t("projectFileType")),
       });
 
       await writeProjectFile(handle, blob);
@@ -217,7 +221,7 @@ export default function App() {
       return;
     }
 
-    showNotice("Direct overwrite is only supported in Chrome/Edge. Downloading a new copy instead.");
+    showNotice({ key: "noticeDownload" });
     downloadProjectBlob(blob);
   }
 
@@ -255,7 +259,7 @@ export default function App() {
   return (
     <main className="app-shell" aria-busy={busyAction !== null}>
       <header className="topbar rf-suite-header rf-suite-header--compact">
-        <a className="rf-brand" href="https://retroformats.com/" aria-label="Retroformats home">
+        <a className="rf-brand" href={suiteUrl("https://retroformats.com/")} aria-label={t("home")}>
           <img
             className="rf-brand__mark"
             src={`${import.meta.env.BASE_URL}retroformats/retroformats-mark.svg`}
@@ -264,17 +268,17 @@ export default function App() {
           />
           <span>
             retroformats<span className="rf-brand__dot">.</span>
-            <span className="rf-brand__product">Breakdown Generator</span>
+            <span className="rf-brand__product">{t("appName")}</span>
           </span>
         </a>
         {openedProjectFileName ? (
           <div className="open-file-status" title={openedProjectFileName}>
-            <span>Template</span>
+            <span>{t("template")}</span>
             <strong>{openedProjectFileName}</strong>
-            {fileHandle ? <small>direct save enabled</small> : <small>download save</small>}
+            {fileHandle ? <small>{t("directSave")}</small> : <small>{t("downloadSave")}</small>}
           </div>
         ) : null}
-        <div className="topbar-actions rf-suite-actions project-toolbar" role="group" aria-label="Project and export actions">
+        <div className="topbar-actions rf-suite-actions project-toolbar" role="group" aria-label={t("projectActions")}>
           <input
             ref={fileInputRef}
             className="visually-hidden"
@@ -287,8 +291,8 @@ export default function App() {
           />
           <button
             type="button"
-            title="Open template"
-            aria-label="Open template"
+            title={t("openTemplate")}
+            aria-label={t("openTemplate")}
             disabled={busyAction !== null}
             onClick={handleOpenProjectPicker}
           >
@@ -296,8 +300,8 @@ export default function App() {
           </button>
           <button
             type="button"
-            title={fileHandle ? "Save template to the opened file" : "Save template as a new file"}
-            aria-label={fileHandle ? "Save template to the opened file" : "Save template as a new file"}
+            title={t(fileHandle ? "saveOpened" : "saveNew")}
+            aria-label={t(fileHandle ? "saveOpened" : "saveNew")}
             disabled={busyAction !== null}
             onClick={handleSaveProject}
           >
@@ -305,54 +309,56 @@ export default function App() {
           </button>
           <button
             type="button"
-            title="Save template as"
-            aria-label="Save template as"
+            title={t("saveAs")}
+            aria-label={t("saveAs")}
             disabled={busyAction !== null}
             onClick={handleSaveProjectAs}
           >
             <SaveAll size={18} />
-            As
+            {t("saveAsShort")}
           </button>
           <span className="toolbar-separator" aria-hidden="true" />
           <button
             type="button"
-            title="Preview PNG"
-            aria-label="Preview PNG"
+            title={t("previewPng")}
+            aria-label={t("previewPng")}
             disabled={busyAction !== null}
             onClick={previewPng}
           >
             <Eye size={18} />
           </button>
-          <button className="rf-action-primary" type="button" title="Export PNG" disabled={busyAction !== null} onClick={exportPng}>
+          <button className="rf-action-primary" type="button" title={t("exportPng")} disabled={busyAction !== null} onClick={exportPng}>
             <Download size={18} />
-            <span>Export PNG</span>
+            <span>{t("exportPng")}</span>
           </button>
           <span className="toolbar-separator" aria-hidden="true" />
           <button
             className="theme-toggle"
             type="button"
-            title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+            title={t(theme === "dark" ? "switchLight" : "switchDark")}
+            aria-label={t(theme === "dark" ? "switchLight" : "switchDark")}
             aria-pressed={theme === "dark"}
             disabled={busyAction !== null}
             onClick={() => setTheme((currentTheme) => (currentTheme === "dark" ? "light" : "dark"))}
           >
             {theme === "dark" ? <Sun size={18} /> : <Moon size={18} />}
-            <span>{theme === "dark" ? "Light" : "Dark"}</span>
+            <span>{t(theme === "dark" ? "light" : "dark")}</span>
           </button>
+          <LanguageSelect />
           <details className="rf-suite-switcher">
-            <summary>Tools <ChevronDown aria-hidden="true" size={14} /></summary>
-            <nav className="rf-suite-nav" aria-label="Retroformats tools">
-              <a href="https://retroformats.com/">Retroformats home</a>
-              <a href="https://retroformats.com/probability/">Probability Calculator</a>
-              <a href="https://retroformats.com/proxy/">Proxy Generator</a>
-              <a href="https://retroformats.com/decklist/">Decklist Generator</a>
-              <a href="https://retroformats.com/breakdown/" aria-current="page">Breakdown Generator</a>
+            <summary>{t("suiteTools")} <ChevronDown aria-hidden="true" size={14} /></summary>
+            <nav className="rf-suite-nav" aria-label={t("suiteNav")}>
+              <a href={suiteUrl("https://retroformats.com/")}>{t("home")}</a>
+              <a href={suiteUrl("https://retroformats.com/probability/")}>{t("probabilityApp")}</a>
+              <a href={suiteUrl("https://retroformats.com/proxy/")}>{t("proxyApp")}</a>
+              <a href={suiteUrl("https://retroformats.com/decklist/")}>{t("decklistApp")}</a>
+              <a href={suiteUrl("https://retroformats.com/breakdown/")} aria-current="page">{t("appName")}</a>
             </nav>
           </details>
         </div>
       </header>
 
-      <h1 className="visually-hidden">Breakdown Generator</h1>
+      <h1 className="visually-hidden">{t("appName")}</h1>
       <section className="workspace">
         <EditorSidebar />
         <BreakdownStage theme={theme} />
@@ -363,14 +369,14 @@ export default function App() {
         <div className="loading-backdrop" role="alert" aria-live="assertive">
           <div className="loading-dialog">
             <span className="loading-spinner" aria-hidden="true" />
-            <p>{BUSY_MESSAGES[busyAction]}</p>
+            <p>{t(BUSY_MESSAGES[busyAction])}</p>
           </div>
         </div>
       ) : null}
 
       {notice ? (
         <div className="app-notice" role="status" aria-live="polite">
-          {notice.message}
+          {renderMessage(notice.message)}
         </div>
       ) : null}
 
@@ -391,19 +397,19 @@ export default function App() {
             aria-labelledby="png-preview-title"
           >
             <header className="png-preview-header">
-              <h2 id="png-preview-title">PNG preview</h2>
+              <h2 id="png-preview-title">{t("pngPreview")}</h2>
               <div className="dialog-actions">
-                <button className="rf-action-primary" type="button" title="Download PNG" aria-label="Download PNG" onClick={downloadPreviewPng}>
+                <button className="rf-action-primary" type="button" title={t("downloadPng")} aria-label={t("downloadPng")} onClick={downloadPreviewPng}>
                   <Download size={17} />
-                  Download PNG
+                  {t("downloadPng")}
                 </button>
-                <button type="button" title="Close preview" aria-label="Close preview" onClick={() => setPngPreviewUrl(null)}>
+                <button type="button" title={t("closePreview")} aria-label={t("closePreview")} onClick={() => setPngPreviewUrl(null)}>
                   <X size={17} />
                 </button>
               </div>
             </header>
             <div className="png-preview-body">
-              <img src={pngPreviewUrl} alt="PNG export preview" />
+              <img src={pngPreviewUrl} alt={t("pngPreviewAlt")} />
             </div>
           </section>
         </div>
