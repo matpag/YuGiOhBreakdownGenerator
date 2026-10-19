@@ -235,3 +235,19 @@ Use project files when you want to keep editing later or reuse a breakdown templ
 Preview and Export use the same render path. Both hide editor-only overlays before rendering.
 
 The exported PNG uses the canvas dimensions configured in the Canvas section, regardless of editor zoom.
+
+## Breakdown quick-start guide (2026-10-20)
+
+Use **Guide** in the header for an inline five-step lesson: example, title, counts, images and export. It stays open while the canvas and both sidebars remain interactive. Opening, changing steps and closing the guide do not edit the document. The guide is translated into all five interface languages. Closing it returns focus to the header button; Show controls expands the relevant sidebar, scrolls to the section and focuses its heading.
+
+**Load example** asks before replacing the current editor document. Fetching/decoding the local background completes before the document is replaced; failure leaves the current document intact. The loaded example clears any previous writable file handle, so saving it cannot overwrite a previously opened community template. Save As produces a separate `.dhbreakdown` file.
+
+The original 1080 × 1080 background is in `public/guide/breakdown-background-1080.png` and can be downloaded from the guide. `src/data/guideExample.ts` builds a self-contained demo with three archetypes (4 + 3 + 1 = 8 players), three original geometric SVG placeholders and system fonts. It loads without an artwork API or a community template download. Project text and images remain independent of the interface language. The existing default document, archive format and PNG renderer are unchanged.
+
+Run `node scripts/check-guide.mjs`, `npm run test:i18n` and `npm run build`. Browser verification should cover all steps, both themes, collapsed sidebar navigation, cancellation/retry when loading, project preservation when changing language, preview/export equality, and Save As/reopen of the demo. Asset provenance and generation prompt are in `docs/guide-background.md`.
+
+### Verification status of the initial guide draft
+
+The 2026-10-20 checks passed for five complete dictionaries (177 messages), TypeScript/Vite production build, all five copies of the shared suite assets, exact background dimensions, self-contained example archive export/import and independence from the default document. The initial inline guide layout was inspected in the browser at 1280 × 720.
+
+Interactive verification of the final guide remains pending: an early native confirmation blocked the Codex in-app browser. It has been replaced with an application dialog with cancel, Escape, focus return and Tab handling, but loading the example, both themes, sidebar navigation and PNG comparison must still be exercised in an unblocked browser before release. No original community template was changed. Keep this change as a draft until those checks are completed.

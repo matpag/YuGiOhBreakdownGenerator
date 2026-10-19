@@ -1142,3 +1142,155 @@ textarea {
     animation: none !important;
   }
 }
+
+/* Inline, non-modal lessons leave the editor and image library available. */
+.app-shell--guide {
+  grid-template-rows: auto auto minmax(0, 1fr);
+}
+.breakdown-guide {
+  position: relative;
+  display: grid;
+  grid-template-columns: 230px minmax(0, 1fr) 130px;
+  gap: 24px;
+  padding: 20px 52px 18px 24px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+  max-height: 310px;
+  overflow: auto;
+  scrollbar-gutter: stable;
+}
+.guide-eyebrow {
+  color: var(--active-text);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .12em;
+}
+.guide-overview h2 {
+  font-size: 19px;
+  margin: 7px 0 8px;
+}
+.guide-overview p,
+.guide-instructions p {
+  font-size: 12px;
+  line-height: 1.55;
+  margin: 0 0 8px;
+}
+.guide-overview p,
+.guide-tip,
+.guide-example figcaption {
+  color: var(--text-muted);
+}
+.guide-overview a {
+  align-items: center;
+  display: inline-flex;
+  gap: 6px;
+  color: var(--active-text);
+  font-size: 11px;
+  margin-top: 7px;
+  text-underline-offset: 3px;
+}
+.guide-steps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-bottom: 12px;
+}
+.guide-steps button {
+  border: 0;
+  background: var(--surface-muted);
+  padding: 4px 9px;
+  min-height: 30px;
+  font-size: 11px;
+}
+.guide-steps button[aria-current="step"] {
+  background: var(--active-bg);
+  box-shadow: inset 0 0 0 1px var(--active-border);
+  color: var(--active-text);
+}
+.guide-steps button span {
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+}
+.guide-instructions h3 {
+  font-size: 14px;
+  margin: 0 0 6px;
+}
+.guide-tip {
+  border-left: 2px solid var(--active-border);
+  padding-left: 10px;
+}
+.guide-total {
+  display: block;
+  font-size: 12px;
+  margin: 0 0 8px;
+  color: var(--active-text);
+}
+.guide-actions,
+.guide-pagination {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.guide-actions {
+  justify-content: space-between;
+  margin-top: 10px;
+}
+.guide-pagination span {
+  font-size: 11px;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+.guide-example {
+  margin: 15px 0 0;
+}
+.guide-example img {
+  display: block;
+  width: 130px;
+  height: 130px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+}
+.guide-example figcaption {
+  margin-top: 7px;
+  text-align: center;
+  font-size: 10px;
+  line-height: 1.5;
+}
+.guide-close {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+}
+[data-guide-section] h2:focus {
+  outline: 2px solid var(--rf-focus);
+  outline-offset: 5px;
+  border-radius: 2px;
+}
+@media (max-width: 1300px) {
+  .breakdown-guide { grid-template-columns: 210px minmax(0, 1fr); gap: 20px; }
+  .guide-example { display: none; }
+  .project-toolbar { gap: 4px; }
+  .topbar { padding-inline: 16px; }
+}
+@media (max-height: 760px) {
+  .breakdown-guide { max-height: 230px; padding-block: 12px; }
+}
+
+.guide-close {
+  width: 32px;
+  min-width: 32px;
+  height: 32px;
+  padding: 0;
+  justify-content: center;
+}
+.guide-confirm-dialog {
+  width: min(480px, calc(100vw - 48px));
+  padding: 24px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--rf-radius-panel);
+  box-shadow: 0 16px 64px var(--shadow);
+}
+.guide-confirm-dialog h2 { margin: 0 0 12px; font-size: 20px; }
+.guide-confirm-dialog p { margin: 0 0 20px; font-size: 14px; line-height: 1.6; color: var(--text-muted); }
+.guide-confirm-dialog .dialog-actions { justify-content: flex-end; }

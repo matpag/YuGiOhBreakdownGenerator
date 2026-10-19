@@ -55,7 +55,7 @@ assert.deepEqual(describeUiError('Invalid .dhbreakdown archive: asset file "asse
 assert.deepEqual(describeUiError(new Error('Unknown browser-specific error'), 'saveProjectError'), { key: 'saveProjectError' });
 
 // Rendered labels must use the provider; proper wordmark and numeric units are intentional exceptions.
-for (const relative of ['src/App.tsx', 'src/components/EditorSidebar.tsx', 'src/components/ImageLibrarySidebar.tsx', 'src/components/BreakdownStage.tsx']) {
+for (const relative of ['src/App.tsx', 'src/components/EditorSidebar.tsx', 'src/components/ImageLibrarySidebar.tsx', 'src/components/BreakdownStage.tsx', 'src/components/BreakdownGuide.tsx', 'src/components/GuideExampleConfirm.tsx']) {
   const source = ts.createSourceFile(relative, await fs.readFile(path.join(root, relative), 'utf8'), ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
   function visit(node) {
     if (ts.isJsxText(node) && node.text.trim()) assert.ok(['retroformats', '.', '%'].includes(node.text.trim()), relative + ': untranslated JSX text: ' + node.text.trim());

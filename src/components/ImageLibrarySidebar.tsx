@@ -11,6 +11,7 @@ import {
   X,
 } from "lucide-react";
 import { fileToAsset, remoteImageToAsset, validateImageFile } from "../lib/assets";
+import { useGuideSection } from "../lib/useGuideSection";
 import { useProjectStore } from "../store/projectStore";
 import { useI18n, type UiMessage } from "../i18n/I18nProvider";
 import { describeUiError } from "../i18n/errors";
@@ -45,6 +46,7 @@ export function ImageLibrarySidebar() {
   const removeImageLibraryItem = useProjectStore((state) => state.removeImageLibraryItem);
   const setSliceAsset = useProjectStore((state) => state.setSliceAsset);
   const [collapsed, setCollapsed] = useState(false);
+  useGuideSection("images", setCollapsed);
   const [artworkSearchQuery, setArtworkSearchQuery] = useState("");
   const [artworkSearchResults, setArtworkSearchResults] = useState<ArtworkSearchResult[]>([]);
   const [artworkSearchPage, setArtworkSearchPage] = useState(0);
@@ -396,9 +398,9 @@ export function ImageLibrarySidebar() {
             ) : null}
           </section>
 
-          <section className="panel library-panel">
+          <section className="panel library-panel" data-guide-section="images">
             <div className="panel-heading-row">
-              <h2>{t("imageLibrary")}</h2>
+              <h2 tabIndex={-1}>{t("imageLibrary")}</h2>
               <label className="file-button">
                 <ImagePlus size={16} />
                 {t("add")}

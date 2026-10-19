@@ -1,5 +1,9 @@
 import { useEffect, useRef, useState } from "react";
-import { ChevronDown, Download, Eye, FolderOpen, Moon, Save, SaveAll, Sun, X } from "lucide-react";
+import { BookOpen, ChevronDown, Download, Eye, FolderOpen, Moon, Save, SaveAll, Sun, X } from "lucide-react";
+import { GuideExampleConfirm } from "./components/GuideExampleConfirm";
+import { BreakdownGuide } from "./components/BreakdownGuide";
+import { createGuideDocument, GUIDE_BACKGROUND_FILE } from "./data/guideExample";
+import { fileToAsset } from "./lib/assets";
 import { BreakdownStage } from "./components/BreakdownStage";
 import { EditorSidebar } from "./components/EditorSidebar";
 import { ImageLibrarySidebar } from "./components/ImageLibrarySidebar";
@@ -38,6 +42,10 @@ const projectFilePickerTypes = (description: string) => [
 export default function App() {
   const { t, message: renderMessage, suiteUrl } = useI18n();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const guideButtonRef = useRef<HTMLButtonElement>(null);
+  const [guideOpen, setGuideOpen] = useState(false);
+  const [guideConfirmOpen, setGuideConfirmOpen] = useState(false);
+  const [guideStep, setGuideStep] = useState(0);
   const [busyAction, setBusyAction] = useState<BusyAction | null>(null);
   const [fileHandle, setFileHandle] = useState<FileSystemFileHandle | null>(null);
   const [notice, setNotice] = useState<Notice | null>(null);
@@ -99,6 +107,36 @@ export default function App() {
 
   function showNotice(message: UiMessage) {
     setNotice({ id: Date.now(), message });
+  }
+
+  function closeGuide() {
+    setGuideOpen(false);
+    guideButtonRef.current?.focus();
+  }
+
+  async function loadGuideExample() {
+    setGuideConfirmOpen(false);
+    setBusyAction("opening");
+    try {
+      const response = await fetch(`${import.meta.env.BASE_URL}${GUIDE_BACKGROUND_FILE}`);
+      if (!response.ok) throw new Error("Guide background unavailable");
+      const background = await fileToAsset(new File([await response.blob()], "breakdown-background-1080.png", { type: "image/png" }));
+      const image = new Image();
+      image.src = background.dataUrl;
+      await image.decode();
+      if (image.naturalWidth !== 1080 || image.naturalHeight !== 1080) throw new Error("Invalid guide background");
+      loadDocument(createGuideDocument(background));
+      // An example must never retain a writable handle to a user's previously opened file.
+      setFileHandle(null);
+      setOpenedProjectFileName(null);
+      setSaveVersion(1);
+      setGuideStep(1);
+      showNotice({ key: "guideExampleLoaded" });
+    } catch {
+      showNotice({ key: "guideLoadError" });
+    } finally {
+      setBusyAction(null);
+    }
   }
 
   async function handleSaveProject() {
@@ -257,7 +295,7 @@ export default function App() {
   }
 
   return (
-    <main className="app-shell" aria-busy={busyAction !== null}>
+    <main className={`app-shell${guideOpen ? " app-shell--guide" : ""}`} aria-busy={busyAction !== null}>
       <header className="topbar rf-suite-header rf-suite-header--compact">
         <a className="rf-brand" href={suiteUrl("https://retroformats.com/")} aria-label={t("home")}>
           <img
@@ -344,6 +382,10 @@ export default function App() {
             {theme === "dark" ? <Sun size={18} /> : <Moon size={18} />}
             <span>{t(theme === "dark" ? "light" : "dark")}</span>
           </button>
+          <button type="button" ref={guideButtonRef} title={t("guideOpen")} aria-controls="breakdown-guide"
+            aria-expanded={guideOpen} disabled={busyAction !== null} onClick={() => setGuideOpen((open) => !open)}>
+            <BookOpen size={18} aria-hidden="true" /><span>{t("guideOpen")}</span>
+          </button>
           <LanguageSelect />
           <details className="rf-suite-switcher">
             <summary>{t("suiteTools")} <ChevronDown aria-hidden="true" size={14} /></summary>
@@ -359,11 +401,16 @@ export default function App() {
       </header>
 
       <h1 className="visually-hidden">{t("appName")}</h1>
+      {guideOpen ? <BreakdownGuide step={guideStep} onStepChange={setGuideStep} onClose={closeGuide}
+        onLoadExample={() => setGuideConfirmOpen(true)} onPreview={previewPng} busy={busyAction !== null} /> : null}
       <section className="workspace">
         <EditorSidebar />
         <BreakdownStage theme={theme} />
         <ImageLibrarySidebar />
       </section>
+
+      {guideConfirmOpen ? <GuideExampleConfirm onCancel={() => setGuideConfirmOpen(false)}
+        onConfirm={() => void loadGuideExample()} /> : null}
 
       {busyAction ? (
         <div className="loading-backdrop" role="alert" aria-live="assertive">

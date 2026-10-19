@@ -19,6 +19,7 @@ import {
   registerEmbeddedFont,
 } from "../lib/fonts";
 import { DEFAULT_LABEL_DISTANCE } from "../lib/geometry";
+import { useGuideSection } from "../lib/useGuideSection";
 import { useProjectStore } from "../store/projectStore";
 import { useI18n, type UiMessage } from "../i18n/I18nProvider";
 import { describeUiError } from "../i18n/errors";
@@ -126,6 +127,7 @@ export function EditorSidebar() {
     ]),
   );
   const [collapsed, setCollapsed] = useState(false);
+  useGuideSection("title slices", setCollapsed);
   const [fontAccessRequested, setFontAccessRequested] = useState(false);
   const [imageUploadError, setImageUploadError] = useState<UiMessage | null>(null);
   const [fontUploadError, setFontUploadError] = useState<UiMessage | null>(null);
@@ -430,8 +432,8 @@ export function EditorSidebar() {
         </div>
       </section>
 
-      <section className="panel">
-        <h2>{t("title")}</h2>
+      <section className="panel" data-guide-section="title">
+        <h2 tabIndex={-1}>{t("title")}</h2>
         <label>
           {t("text")}
           <textarea value={project.title.text} onChange={(event) => setTitle(event.target.value)} />
@@ -715,8 +717,8 @@ export function EditorSidebar() {
         </button>
       </section>
 
-      <section className="panel">
-        <h2>{t("slices")}</h2>
+      <section className="panel" data-guide-section="slices">
+        <h2 tabIndex={-1}>{t("slices")}</h2>
         <div className="topbar-actions">
           <button type="button" onClick={addSlice}>
             <Plus size={16} />
