@@ -246,8 +246,12 @@ The original 1080 × 1080 background is in `public/guide/breakdown-background-10
 
 Run `node scripts/check-guide.mjs`, `npm run test:i18n` and `npm run build`. Browser verification should cover all steps, both themes, collapsed sidebar navigation, cancellation/retry when loading, project preservation when changing language, preview/export equality, and Save As/reopen of the demo. Asset provenance and generation prompt are in `docs/guide-background.md`.
 
-### Verification status of the initial guide draft
+### Guide verification (2026-10-20)
 
-The 2026-10-20 checks passed for five complete dictionaries (177 messages), TypeScript/Vite production build, all five copies of the shared suite assets, exact background dimensions, self-contained example archive export/import and independence from the default document. The initial inline guide layout was inspected in the browser at 1280 × 720.
+The guide passed five complete dictionaries (177 messages), TypeScript/Vite production build, identical shared suite assets, exact background dimensions, self-contained example archive export/import and independence from the default document.
 
-Interactive verification of the final guide remains pending: an early native confirmation blocked the Codex in-app browser. It has been replaced with an application dialog with cancel, Escape, focus return and Tab handling, but loading the example, both themes, sidebar navigation and PNG comparison must still be exercised in an unblocked browser before release. No original community template was changed. Keep this change as a draft until those checks are completed.
+Browser checks completed all five steps in EN/IT/DE/ES/FR, with project controls preserved and byte-identical PNG previews across languages and both existing themes. Checked layouts at 1180 × 720, 1280 × 720 and 1440 × 900; no horizontal overflow. The 1080 × 1080 exported render has no selection overlays. Keyboard checks covered confirmation cancellation, Tab handling, Escape, heading focus, return to Guide and keeping the guide open when closing the PNG preview. Show controls expands either collapsed sidebar and focuses its target section.
+
+A temporarily missing background in the local test build produced the translated error without replacing the edited document; restoring it allowed a successful retry. The original community templates remained unchanged. Library insertion was verified to add a new image layer when a slice already has an image, and the lesson now distinguishes adding from replacing an image.
+
+Browser-native file pickers and download completion were not automated in the in-app browser: its download event did not report completion. PNG pixels/dimensions were verified from the actual preview; the existing `.dhbreakdown` serializer/importer was tested through an archive round-trip. Detailed evidence stays in the portal workspace under `.local/verification/breakdown-guide/` and is not committed or published.

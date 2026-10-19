@@ -1,8 +1,9 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
+import { fileURLToPath } from 'node:url';
 import { createServer } from 'vite';
 
-const server = await createServer({ server: { middlewareMode: true, hmr: false } });
+const server = await createServer({ root: fileURLToPath(new URL('..', import.meta.url)), server: { middlewareMode: true, hmr: false } });
 try {
   const { createGuideDocument, GUIDE_BACKGROUND_FILE } = await server.ssrLoadModule('/src/data/guideExample.ts');
   const { defaultDocument } = await server.ssrLoadModule('/src/data/defaultProject.ts');

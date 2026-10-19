@@ -22,7 +22,7 @@ export function BreakdownGuide({ step, onStepChange, onClose, onLoadExample, onP
   const total = useProjectStore((state) => state.project.pieChart.slices.reduce((sum, slice) => sum + slice.value, 0));
   const current = steps[step];
   return <section id="breakdown-guide" className="breakdown-guide" aria-labelledby="guide-heading"
-    onKeyDown={(event) => { if (event.key === "Escape") onClose(); }}>
+    onKeyDown={(event) => { if (event.key === "Escape" && !document.querySelector('[aria-modal="true"]')) onClose(); }}>
     <div className="guide-overview">
       <span className="guide-eyebrow">{t("guideEyebrow")}</span>
       <h2 id="guide-heading">{t("guideTitle")}</h2>
